@@ -82,15 +82,6 @@ export function TableEditor({ table, schema, lang, onSave, onClose }: Props) {
     onClose()
   }
 
-  // Debug: mount/unmount lifecycle
-  useEffect(() => {
-    console.log('[TAG-DEBUG][editor.MOUNT] table?.name:', table?.name, 'table?.tags:', JSON.stringify(table?.tags))
-    return () => console.log('[TAG-DEBUG][editor.UNMOUNT] for table:', table?.name)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  console.log('[TAG-DEBUG][editor.render] table?.name:', table?.name, 'table?.tags:', JSON.stringify(table?.tags))
-
   const accent = name ? tableColor(name) : '#6366f1'
 
   const updateCol = (i: number, patch: Partial<Column>) => {
@@ -116,36 +107,23 @@ export function TableEditor({ table, schema, lang, onSave, onClose }: Props) {
 
   const save = () => {
     const trimmedName = name.trim()
-    console.log('[TAG-DEBUG][editor.save] table name:', trimmedName)
-    
+
     // Auto-add pending tag if user forgot Enter
     const finalTags = [...tags]
     const pendingTag = tagInput.trim().toLowerCase().replace(/\s+/g, '_')
-    if (pendingTag && !finalTags.includes(pendingTag)) {
-      finalTags.push(pendingTag)
-      console.log('[TAG-DEBUG][editor.save] auto-added pending tag:', pendingTag)
-    }
+    if (pendingTag && !finalTags.includes(pendingTag)) finalTags.push(pendingTag)
 
-    console.log('[TAG-DEBUG][editor.save] local tags state:', JSON.stringify(finalTags))
-    
     if (!trimmedName) {
       setNameError(t.tableName + ' required')
       return
     }
-    
+
     if (isNew && schema.tables.find(tb => tb.name === trimmedName)) {
       setNameError('Already exists')
       return
     }
 
-    const updatedTable: Table = {
-      name: trimmedName,
-      columns,
-      tags: finalTags
-    }
-
-    console.log('[TAG-DEBUG][editor.save] final object to onSave:', JSON.stringify(updatedTable))
-    onSave(updatedTable, isNew ? null : table!.name)
+    onSave({ name: trimmedName, columns, tags: finalTags }, isNew ? null : table!.name)
   }
 
   const otherTables = schema.tables.filter(tb => tb.name !== (table?.name ?? ''))

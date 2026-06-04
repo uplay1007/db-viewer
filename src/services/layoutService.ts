@@ -158,6 +158,5 @@ export async function computeELKLayout(
     rowH = Math.max(rowH, h)
   }
 
-  console.log('[ELK-DEBUG] Computed positions for', Object.keys(allPositions).length, 'nodes')
   return { positions: allPositions, routes: allRoutes }
 }
