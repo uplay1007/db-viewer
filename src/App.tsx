@@ -80,11 +80,16 @@ function schemaToFlow(
       const key = `${table.name}-${target}-${col.name}`
       if (seen.has(key)) continue
       seen.add(key)
-      const color = tagColor(table.tags)
+      const targetTable = schema.tables.find(t => t.name === target)
       edges.push({
         id: key, source: table.name, target,
         type: 'fk',
-        data: { label: `${col.name} → ${col.foreignKey.column}`, color } satisfies OrthoEdgeData,
+        data: {
+          label: `${col.name} → ${col.foreignKey.column}`,
+          color: '#4b5563',
+          sourceColor: tagColor(table.tags),
+          targetColor: tagColor(targetTable?.tags),
+        } satisfies OrthoEdgeData,
       })
     }
   }

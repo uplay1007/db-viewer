@@ -10,6 +10,8 @@ import type { RoutePoint } from '../services/layoutService'
 export interface OrthoEdgeData extends Record<string, unknown> {
   label: string
   color: string
+  sourceColor?: string
+  targetColor?: string
   points?: RoutePoint[]
 }
 
@@ -52,11 +54,15 @@ export function OrthoEdge({
   data,
 }: EdgeProps) {
   const [hovered, setHovered] = useState(false)
-  const { label, color, points } = (data ?? {}) as OrthoEdgeData
+  const { label, color, sourceColor, targetColor, points } = (data ?? {}) as OrthoEdgeData
   const hl = useContext(HighlightCtx)
 
   const edgeDimmed      = hl.active && source !== hl.focusTable && target !== hl.focusTable
   const edgeHighlighted = hl.active && (source === hl.focusTable || target === hl.focusTable)
+
+  const activeColor = edgeHighlighted
+    ? (source === hl.focusTable ? sourceColor : targetColor) ?? color
+    : color
 
   let edgePath: string
   let labelX: number
@@ -101,7 +107,7 @@ export function OrthoEdge({
         <path
           d={edgePath}
           fill="none"
-          stroke={color}
+          stroke={activeColor}
           strokeWidth={6}
           strokeOpacity={0.25}
           style={{ pointerEvents: 'none', filter: 'blur(3px)' }}
@@ -112,15 +118,15 @@ export function OrthoEdge({
         id={id}
         d={edgePath}
         fill="none"
-        stroke={color}
+        stroke={activeColor}
         strokeWidth={edgeHighlighted ? 2.5 : hovered ? 2.5 : 1.5}
         strokeOpacity={edgeDimmed ? 0.06 : 1}
         style={{ transition: 'stroke-width 0.15s, stroke-opacity 0.2s', pointerEvents: 'none' }}
       />
       {/* Endpoint dots */}
-      <circle cx={startDot.x} cy={startDot.y} r={edgeHighlighted ? 5 : 4} fill={color}
+      <circle cx={startDot.x} cy={startDot.y} r={edgeHighlighted ? 5 : 4} fill={activeColor}
         opacity={edgeDimmed ? 0.06 : 1} style={{ pointerEvents: 'none' }} />
-      <circle cx={endDot.x} cy={endDot.y} r={edgeHighlighted ? 5 : 4} fill={color}
+      <circle cx={endDot.x} cy={endDot.y} r={edgeHighlighted ? 5 : 4} fill={activeColor}
         opacity={edgeDimmed ? 0.06 : 1} style={{ pointerEvents: 'none' }} />
 
       {/* Label */}
@@ -138,10 +144,10 @@ export function OrthoEdge({
               className="text-[10px] font-mono px-2 py-0.5 rounded-full whitespace-nowrap select-none"
               style={{
                 background: '#1a1d27',
-                border: `1px solid ${color}${edgeHighlighted ? 'cc' : '55'}`,
-                color,
+                border: `1px solid ${activeColor}${edgeHighlighted ? 'cc' : '55'}`,
+                color: activeColor,
                 boxShadow: edgeHighlighted
-                  ? `0 0 8px ${color}66, 0 2px 8px rgba(0,0,0,0.6)`
+                  ? `0 0 8px ${activeColor}66, 0 2px 8px rgba(0,0,0,0.6)`
                   : `0 2px 8px rgba(0,0,0,0.6)`,
                 fontWeight: edgeHighlighted ? 700 : 400,
               }}
