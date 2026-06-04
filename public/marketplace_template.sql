@@ -1,11 +1,9 @@
--- @tags: roles, rollll
 CREATE TABLE roles (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,
   description TEXT
 );
 
--- @tags: users, roles
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   role_id INTEGER NOT NULL,
@@ -18,7 +16,6 @@ CREATE TABLE users (
   FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
--- @tags: brands
 CREATE TABLE brands (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,
@@ -27,7 +24,6 @@ CREATE TABLE brands (
   logo_url VARCHAR(255)
 );
 
--- @tags: categories
 CREATE TABLE categories (
   id SERIAL PRIMARY KEY,
   parent_id INTEGER,
@@ -36,7 +32,6 @@ CREATE TABLE categories (
   FOREIGN KEY (parent_id) REFERENCES categories(id)
 );
 
--- @tags: products, categories, brands, users
 CREATE TABLE products (
   id SERIAL PRIMARY KEY,
   category_id INTEGER NOT NULL,
@@ -53,7 +48,6 @@ CREATE TABLE products (
   FOREIGN KEY (seller_id) REFERENCES users(id)
 );
 
--- @tags: product, products
 CREATE TABLE product_images (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL,
@@ -63,7 +57,6 @@ CREATE TABLE product_images (
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- @tags: addresses, users
 CREATE TABLE addresses (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
@@ -75,7 +68,6 @@ CREATE TABLE addresses (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- @tags: payment, users
 CREATE TABLE payment_methods (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
@@ -87,7 +79,6 @@ CREATE TABLE payment_methods (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- @tags: orders, users
 CREATE TABLE orders (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
@@ -100,7 +91,6 @@ CREATE TABLE orders (
   FOREIGN KEY (address_id) REFERENCES addresses(id)
 );
 
--- @tags: order, orders, products
 CREATE TABLE order_items (
   id SERIAL PRIMARY KEY,
   order_id INTEGER NOT NULL,
@@ -111,7 +101,6 @@ CREATE TABLE order_items (
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- @tags: payments, orders, payment
 CREATE TABLE payments (
   id SERIAL PRIMARY KEY,
   order_id INTEGER NOT NULL,
@@ -124,7 +113,6 @@ CREATE TABLE payments (
   FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)
 );
 
--- @tags: warehouses, users
 CREATE TABLE warehouses (
   id SERIAL PRIMARY KEY,
   manager_id INTEGER,
@@ -135,7 +123,6 @@ CREATE TABLE warehouses (
   FOREIGN KEY (manager_id) REFERENCES users(id)
 );
 
--- @tags: inventory, products, warehouses
 CREATE TABLE inventory (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL,
@@ -147,7 +134,6 @@ CREATE TABLE inventory (
   FOREIGN KEY (warehouse_id) REFERENCES warehouses(id)
 );
 
--- @tags: shipments, orders, warehouses, users
 CREATE TABLE shipments (
   id SERIAL PRIMARY KEY,
   order_id INTEGER NOT NULL,
@@ -162,7 +148,6 @@ CREATE TABLE shipments (
   FOREIGN KEY (courier_id) REFERENCES users(id)
 );
 
--- @tags: reviews, products, users
 CREATE TABLE reviews (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL,
@@ -176,14 +161,12 @@ CREATE TABLE reviews (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- @tags: tags
 CREATE TABLE tags (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,
   slug VARCHAR(255) NOT NULL UNIQUE
 );
 
--- @tags: product, products, tags
 CREATE TABLE product_tags (
   product_id INTEGER PRIMARY KEY,
   tag_id INTEGER PRIMARY KEY,
@@ -191,7 +174,6 @@ CREATE TABLE product_tags (
   FOREIGN KEY (tag_id) REFERENCES tags(id)
 );
 
--- @tags: discounts
 CREATE TABLE discounts (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -203,7 +185,6 @@ CREATE TABLE discounts (
   is_active BOOLEAN NOT NULL
 );
 
--- @tags: coupon, discounts
 CREATE TABLE coupon_codes (
   id SERIAL PRIMARY KEY,
   discount_id INTEGER NOT NULL,
@@ -213,7 +194,6 @@ CREATE TABLE coupon_codes (
   FOREIGN KEY (discount_id) REFERENCES discounts(id)
 );
 
--- @tags: cart, users
 CREATE TABLE cart (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL UNIQUE,
@@ -222,7 +202,6 @@ CREATE TABLE cart (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- @tags: cart, products
 CREATE TABLE cart_items (
   id SERIAL PRIMARY KEY,
   cart_id INTEGER NOT NULL,
@@ -233,7 +212,6 @@ CREATE TABLE cart_items (
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- @tags: wishlist, users
 CREATE TABLE wishlist (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL UNIQUE,
@@ -241,7 +219,6 @@ CREATE TABLE wishlist (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- @tags: wishlist, products
 CREATE TABLE wishlist_items (
   id SERIAL PRIMARY KEY,
   wishlist_id INTEGER NOT NULL,
@@ -251,7 +228,6 @@ CREATE TABLE wishlist_items (
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- @tags: suppliers
 CREATE TABLE suppliers (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -261,7 +237,6 @@ CREATE TABLE suppliers (
   rating DECIMAL
 );
 
--- @tags: supplier, suppliers, products
 CREATE TABLE supplier_products (
   id SERIAL PRIMARY KEY,
   supplier_id INTEGER NOT NULL,
@@ -273,7 +248,6 @@ CREATE TABLE supplier_products (
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- @tags: notifications, users
 CREATE TABLE notifications (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
@@ -285,7 +259,6 @@ CREATE TABLE notifications (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- @tags: support, users, orders
 CREATE TABLE support_tickets (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
@@ -301,7 +274,6 @@ CREATE TABLE support_tickets (
   FOREIGN KEY (assigned_to) REFERENCES users(id)
 );
 
--- @tags: ticket, support, users
 CREATE TABLE ticket_messages (
   id SERIAL PRIMARY KEY,
   ticket_id INTEGER NOT NULL,
@@ -312,7 +284,6 @@ CREATE TABLE ticket_messages (
   FOREIGN KEY (sender_id) REFERENCES users(id)
 );
 
--- @tags: audit, users
 CREATE TABLE audit_log (
   id SERIAL PRIMARY KEY,
   user_id INTEGER,
@@ -326,7 +297,6 @@ CREATE TABLE audit_log (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- @tags: product, products
 CREATE TABLE product_attributes (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL,

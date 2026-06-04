@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { autoDetectTags } from './utils/autoTags'
 import {
   ReactFlow,
   Background,
@@ -356,13 +355,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     currentNodes?: Node[],
     initialSavedPos?: Record<string, { x: number; y: number }>
   ) => {
-    const needsTags = s.tables.some(t => t.tags === undefined)
-    let schemaToUse = s
-    if (needsTags) {
-      const tagMap = autoDetectTags(s)
-      schemaToUse = { ...s, tables: s.tables.map(t => t.tags !== undefined ? t : { ...t, tags: tagMap[t.name] ?? [] }) }
-    }
-    
+    const schemaToUse = { ...s, tables: s.tables.map(t => t.tags !== undefined ? t : { ...t, tags: [] }) }
+
     if (initialSavedPos) {
       masterPositionsRef.current = { ...initialSavedPos }
     }
