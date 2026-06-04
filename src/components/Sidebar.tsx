@@ -1,4 +1,4 @@
-import { tableColor } from '../utils/colors'
+import { tagColor } from '../utils/colors'
 import type { Table } from '../types/schema'
 import { T, type Lang } from '../i18n'
 
@@ -44,7 +44,7 @@ export function Sidebar({ tables, lang, onLangToggle, onNew, onEdit, onDelete, o
       {/* Table list */}
       <div className="flex-1 overflow-y-auto px-3 space-y-0.5 pb-3">
         {tables.map(table => {
-          const color = tableColor(table.name)
+          const color = tagColor(table.tags)
           return (
             <div
               key={table.name}

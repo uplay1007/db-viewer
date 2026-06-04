@@ -4,10 +4,17 @@ const PALETTE = [
   '#f97316', '#3b82f6', '#84cc16', '#a855f7',
 ]
 
-export function tableColor(tableName: string): string {
+const NEUTRAL = '#4b5563'
+
+export function tableColor(name: string): string {
   let hash = 0
-  for (let i = 0; i < tableName.length; i++) {
-    hash = (hash * 31 + tableName.charCodeAt(i)) >>> 0
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0
   }
   return PALETTE[hash % PALETTE.length]
+}
+
+export function tagColor(tags: string[] | undefined): string {
+  if (!tags || tags.length === 0) return NEUTRAL
+  return tableColor(tags[0])
 }

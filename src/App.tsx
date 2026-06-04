@@ -18,7 +18,7 @@ import '@xyflow/react/dist/style.css'
 
 import type { Schema, Table } from './types/schema'
 import { computeLayout } from './utils/layout'
-import { tableColor } from './utils/colors'
+import { tableColor, tagColor } from './utils/colors'
 import {
   saveCurrentSession, loadCurrentSession,
   saveDB, getSaves,
@@ -80,7 +80,7 @@ function schemaToFlow(
       const key = `${table.name}-${target}-${col.name}`
       if (seen.has(key)) continue
       seen.add(key)
-      const color = tableColor(table.name)
+      const color = tagColor(table.tags)
       edges.push({
         id: key, source: table.name, target,
         type: 'fk',
@@ -565,7 +565,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                     <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Disabled} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}>
                       <Background color="#1a1d27" gap={20} />
                       <Controls showInteractive={false} className="!bg-[#1a1d27] !border-white/10 !rounded-xl !overflow-hidden !shadow-2xl" />
-                      <MiniMap style={{ background: '#13151f', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }} nodeColor={n => tableColor(n.id)} maskColor="rgba(0,0,0,0.6)" />
+                      <MiniMap style={{ background: '#13151f', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }} nodeColor={n => tagColor((n.data as { table?: { tags?: string[] } }).table?.tags)} maskColor="rgba(0,0,0,0.6)" />
                     </ReactFlow>
                   </MultiSelectCtx.Provider>
                 </HighlightCtx.Provider>

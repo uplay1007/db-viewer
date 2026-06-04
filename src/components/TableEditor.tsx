@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Table, Column, Schema } from '../types/schema'
-import { tableColor } from '../utils/colors'
+import { tableColor, tagColor } from '../utils/colors'
 import { T, type Lang } from '../i18n'
 import { useDialog } from '../contexts/DialogContext'
 import { FKPicker } from './FKPicker'
@@ -82,7 +82,7 @@ export function TableEditor({ table, schema, lang, onSave, onClose }: Props) {
     onClose()
   }
 
-  const accent = name ? tableColor(name) : '#6366f1'
+  const accent = tagColor(tags.length > 0 ? tags : undefined)
 
   const updateCol = (i: number, patch: Partial<Column>) => {
     setColumns(cols => cols.map((c, idx) => idx === i ? { ...c, ...patch } : c))

@@ -1,6 +1,6 @@
 import { useState, useRef, memo, useContext, useEffect } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { tableColor } from '../utils/colors'
+import { tagColor } from '../utils/colors'
 import { MultiSelectCtx } from './TableNode.multiselect'
 import { HighlightCtx } from '../contexts/highlight'
 import { ViewModeCtx } from '../contexts/viewMode'
@@ -45,7 +45,7 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
   const multiSelectActive = useContext(MultiSelectCtx)
   const hl = useContext(HighlightCtx)
   const { mode: viewMode, bulkKey, bulkExpand } = useContext(ViewModeCtx)
-  const accent = tableColor(table.name)
+  const accent = tagColor(table.tags)
   const lastAppliedKey = useRef(0)
 
   useEffect(() => {
