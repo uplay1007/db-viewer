@@ -1,0 +1,71 @@
+import type { Schema, Table, Column } from '../../types/schema'
+
+export function parsePrisma(text: string): Schema {
+  const tables: Table[] = []
+  const modelRegex = /model\s+(\w+)\s*\{([^}]+)\}/g
+  let m: RegExpExecArray | null
+
+  while ((m = modelRegex.exec(text)) !== null) {
+    const name = m[1]
+    const body = m[2]
+    const columns: Column[] = []
+
+    for (const rawLine of body.split('\n')) {
+      const line = rawLine.trim()
+      if (!line || line.startsWith('//') || line.startsWith('@@')) continue
+
+      const parts = line.split(/\s+/)
+      if (parts.length < 2) continue
+      const [colName, colType] = parts
+
+      // skip relation fields (lowercase type = relation field ref)
+      if (/^[a-z]/.test(colType) && !colType.includes('[]')) {
+        // check if it looks like a scalar — if not, skip
+        const scalars = ['string','int','float','boolean','datetime','json','bigint','decimal','bytes']
+        if (!scalars.includes(colType.toLowerCase().replace('?',''))) continue
+      }
+
+      const col: Column = {
+        name: colName,
+        type: colType.replace('?', ''),
+        nullable: colType.endsWith('?'),
+        primaryKey: line.includes('@id'),
+        unique: line.includes('@unique'),
+      }
+
+      const relationMatch = line.match(/@relation\(fields:\s*\[(\w+)\],\s*references:\s*\[(\w+)\].*?(?:,\s*map:\s*"[^"]*")?\)/)
+      if (relationMatch) {
+        // this decorator lives on a different line; handled separately
+      }
+
+      columns.push(col)
+    }
+
+    // second pass: wire FK from @relation
+    const bodyLines = body.split('\n').map(l => l.trim()).filter(Boolean)
+    for (const line of bodyLines) {
+      const rel = line.match(/@relation\(fields:\s*\[(\w+)\],\s*references:\s*\[(\w+)\]/)
+      if (!rel) continue
+      const fieldName = rel[1]
+      const refCol = rel[2]
+      // find the model this field points to
+      const modelField = bodyLines.find(l => {
+        const p = l.split(/\s+/)
+        return p[0] && /^[A-Z]/.test(p[1] ?? '')
+      })
+      const refTable = modelField?.split(/\s+/)[1]?.replace('?','').replace('[]','') ?? ''
+      const col = columns.find(c => c.name === fieldName)
+      if (col && refTable) col.foreignKey = { table: refTable, column: refCol }
+    }
+
+    // sort: PK first, FK second, rest
+    columns.sort((a, b) => {
+      const rank = (c: Column) => c.primaryKey ? 0 : c.foreignKey ? 1 : 2
+      return rank(a) - rank(b)
+    })
+
+    tables.push({ name, columns })
+  }
+
+  return { tables }
+}
