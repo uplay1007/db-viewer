@@ -33,8 +33,6 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) and drop in a schema file.
-
 ## Supported Formats
 
 | Format | Import | Export |
