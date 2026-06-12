@@ -30,6 +30,7 @@ import { OrthoEdge, type OrthoEdgeData } from './components/OrthoEdge'
 import { computeELKLayout } from './services/layoutService'
 import { TableEditor } from './components/TableEditor'
 import { Sidebar, SIDEBAR_W } from './components/Sidebar'
+import { SchemaEditor } from './components/SchemaEditor'
 import { DataViewer } from './components/DataViewer'
 import { UploadZone, type OpenResult } from './components/UploadZone'
 import { writeToHandle } from './utils/fileAccess'
@@ -165,6 +166,31 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setBulkExpand(mode !== 'collapsed')
     setBulkKey(k => k + 1)
   }, [])
+
+  const [splitView, setSplitView] = useState(false)
+  const [editorWidth, setEditorWidth] = useState(380)
+  const isDraggingRef = useRef(false)
+  const dragStartXRef = useRef(0)
+  const dragStartWidthRef = useRef(0)
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDraggingRef.current = true
+    dragStartXRef.current = e.clientX
+    dragStartWidthRef.current = editorWidth
+    const onMove = (ev: MouseEvent) => {
+      if (!isDraggingRef.current) return
+      const delta = ev.clientX - dragStartXRef.current
+      setEditorWidth(Math.max(200, Math.min(800, dragStartWidthRef.current + delta)))
+    }
+    const onUp = () => {
+      isDraggingRef.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [editorWidth])
 
   const [multiSelectActive, setMultiSelectActive] = useState(false)
   const [highlightTable, setHighlightTable] = useState<string | null>(null)
@@ -373,6 +399,10 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setEdges(e)
   }, [handleEdit, setNodes, setEdges])
 
+  const handleSchemaFromEditor = useCallback((newSchema: Schema) => {
+    applySchema(newSchema, undefined, masterPositionsRef.current)
+  }, [applySchema])
+
   useEffect(() => {
     if (session) {
       applySchema(session.schema, undefined, session.positions)
@@ -512,15 +542,36 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {activeTab === 'schema' ? (
           <div style={{ width: '100%', height: '100%', display: 'flex', position: 'relative' }}>
-            <Sidebar
-              tables={schema.tables}
-              lang={lang}
-              onLangToggle={() => setLang(l => l === 'en' ? 'ru' : 'en')}
-              onNew={() => setEditorState('new')}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onExit={handleExit}
-            />
+            {splitView ? (
+              <>
+                <div style={{ width: editorWidth, height: '100%', flexShrink: 0, overflow: 'hidden' }}>
+                  <SchemaEditor schema={schema} onSchemaChange={handleSchemaFromEditor} />
+                </div>
+                {/* Resize handle */}
+                <div
+                  onMouseDown={handleResizeStart}
+                  style={{
+                    width: 5, height: '100%', flexShrink: 0, cursor: 'col-resize',
+                    background: 'rgba(255,255,255,0.04)',
+                    borderLeft: '1px solid rgba(255,255,255,0.08)',
+                    borderRight: '1px solid rgba(255,255,255,0.08)',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.3)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                />
+              </>
+            ) : (
+              <Sidebar
+                tables={schema.tables}
+                lang={lang}
+                onLangToggle={() => setLang(l => l === 'en' ? 'ru' : 'en')}
+                onNew={() => setEditorState('new')}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onExit={handleExit}
+              />
+            )}
             <div style={{ flex: 1, height: '100%', background: '#0f1117', position: 'relative' }}>
               <div className="absolute top-6 left-6 z-10 flex items-center gap-3">
                 <div className="flex bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl">
@@ -567,6 +618,12 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                   <button onClick={handleLayout} disabled={layouting} className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${layouting ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`} title="Re-run auto layout">
                     <span style={{ fontSize: 15, display: 'inline-block', transform: layouting ? 'rotate(90deg)' : undefined }}>⟳</span>
                     <span className="text-xs font-bold uppercase tracking-wider">{layouting ? '...' : 'Layout'}</span>
+                  </button>
+                </div>
+                <div className="flex bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl">
+                  <button onClick={() => setSplitView(v => !v)} className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${splitView ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} title="Toggle JSON editor">
+                    <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700 }}>{'{}'}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">JSON</span>
                   </button>
                 </div>
               </div>
