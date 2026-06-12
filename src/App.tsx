@@ -20,7 +20,7 @@ import type { Schema, Table } from './types/schema'
 import { computeLayout } from './utils/layout'
 import { tableColor, tagColor } from './utils/colors'
 import {
-  saveCurrentSession, loadCurrentSession,
+  saveCurrentSession, loadCurrentSession, clearCurrentSession,
   saveDB, getSaves,
 } from './utils/storage'
 import { TableNode, type TableNodeData, MultiSelectCtx } from './components/TableNode'
@@ -76,6 +76,7 @@ function schemaToFlow(
     for (const col of table.columns) {
       if (!col.foreignKey) continue
       const target = col.foreignKey.table
+      if (target === table.name) continue
       if (!schema.tables.find(t => t.name === target)) continue
       const key = `${table.name}-${target}-${col.name}`
       if (seen.has(key)) continue
@@ -149,7 +150,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const [activeTab, setActiveTab] = useState<Tab>('schema')
   const [saveFlash, setSaveFlash] = useState(false)
 
-  const rfInstanceRef = useRef<ReactFlowInstance | null>(null)
+  const rfInstanceRef = useRef<ReactFlowInstance<any, any> | null>(null)
   const groupsBtnRef = useRef<HTMLDivElement>(null)
 
   const [canvasMode, setCanvasMode] = useState<'pan' | 'select'>('pan')
@@ -274,7 +275,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         if (h) heights[n.id] = h
       })
       const { positions } = await computeELKLayout(schema, heights)
-      
+
       // If we are in "All Groups" mode, update master positions
       if (!tagFilter) {
         masterPositionsRef.current = { ...positions }
@@ -298,7 +299,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       : nodes
     if (visibleNodes.length === 0) return
     const measuredCount = visibleNodes.filter(n => (n.measured as { height?: number } | undefined)?.height).length
-    if (measuredCount < Math.ceil(visibleNodes.length / 2)) return
+    if (measuredCount < visibleNodes.length) return
     setPendingELK(false)
     handleLayout()
   }, [pendingELK, nodes, layouting, handleLayout, tagFilter, schema])
@@ -306,8 +307,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   // Custom onNodesChange to track manual dragging into Master Positions
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
     onNodesChange(changes)
-    
-    // Only sync to master positions if NOT in a filtered group view
+
     if (!tagFilter) {
       changes.forEach(c => {
         if (c.type === 'position' && c.position) {
@@ -430,7 +430,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     return () => window.removeEventListener('keydown', onKey)
   }, [handleSave])
 
-  const handleExit = useCallback(() => { setSchema(null); setCurrentSaveId(undefined); setFileHandle(null); setTagFilter(null) }, [])
+  const handleExit = useCallback(() => { clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined); setFileHandle(null); setTagFilter(null) }, [])
 
   const handleEditorSave = useCallback((updated: Table, originalName: string | null) => {
     if (!schema) return
@@ -488,7 +488,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ height: TAB_H, background: '#13151f', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', padding: '0 20px', gap: 32, shrink: 0 }}>
+      <div style={{ height: TAB_H, background: '#13151f', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', padding: '0 20px', gap: 32, flexShrink: 0 }}>
         <div className="flex items-center gap-3 mr-4">
           <span className="text-white font-black text-xl tracking-tighter">DB Viewer</span>
           <div className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-gray-500 font-bold uppercase tracking-widest">{schema.tables.length} tables</div>
@@ -496,7 +496,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/5">
           {(['schema', 'data'] as Tab[]).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' : 'text-gray-500 hover:text-gray-300'}`}>
-              {t[tab + 'Tab']}
+              {tab === 'schema' ? t.schemaTab : t.dataTab}
             </button>
           ))}
         </div>
@@ -563,11 +563,17 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                     <option value="collapsed">Collapsed</option>
                   </select>
                 </div>
+                <div className="flex bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl">
+                  <button onClick={handleLayout} disabled={layouting} className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${layouting ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`} title="Re-run auto layout">
+                    <span style={{ fontSize: 15, display: 'inline-block', transform: layouting ? 'rotate(90deg)' : undefined }}>⟳</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">{layouting ? '...' : 'Layout'}</span>
+                  </button>
+                </div>
               </div>
               <ViewModeCtx.Provider value={{ mode: viewMode, bulkExpand, bulkKey }}>
                 <HighlightCtx.Provider value={highlightCtxValue}>
                   <MultiSelectCtx.Provider value={multiSelectActive}>
-                    <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Disabled} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}>
+                    <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}>
                       <Background color="#1a1d27" gap={20} />
                       <Controls showInteractive={false} className="!bg-[#1a1d27] !border-white/10 !rounded-xl !overflow-hidden !shadow-2xl" />
                       <MiniMap style={{ background: '#13151f', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }} nodeColor={n => tagColor((n.data as { table?: { tags?: string[] } }).table?.tags)} maskColor="rgba(0,0,0,0.6)" />

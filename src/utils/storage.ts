@@ -8,6 +8,7 @@ export interface CurrentSession {
   v: number
   schema: Schema
   positions: Record<string, { x: number; y: number }>
+  saveId?: string
 }
 
 export function saveCurrentSession(data: Omit<CurrentSession, 'v'>) {

@@ -6,4 +6,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['elkjs/lib/elk.bundled.js'],
   },
+  build: {
+  chunkSizeWarningLimit: 2000  // кБ
+  },
 })

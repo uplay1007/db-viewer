@@ -97,8 +97,8 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
         pointerEvents: isDimmed ? 'none' : 'all',
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: accent, border: 'none', width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Right} style={{ background: accent, border: 'none', width: 8, height: 8 }} />
+      <Handle type="target" position={Position.Left} style={{ opacity: 0, width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Right} style={{ opacity: 0, width: 8, height: 8 }} />
 
       {/* Header — click = highlight */}
       <div
