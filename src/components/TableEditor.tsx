@@ -118,7 +118,8 @@ export function TableEditor({ table, schema, lang, onSave, onClose }: Props) {
       return
     }
 
-    if (isNew && schema.tables.find(tb => tb.name === trimmedName)) {
+    const nameConflict = schema.tables.find(tb => tb.name === trimmedName && tb.name !== table?.name)
+    if (nameConflict) {
       setNameError('Already exists')
       return
     }

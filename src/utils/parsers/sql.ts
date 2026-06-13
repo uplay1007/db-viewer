@@ -59,7 +59,7 @@ export function parseSQL(text: string): Schema {
     for (const rawLine of splitTopLevel(body)) {
       const line = rawLine.trim()
       if (!line) continue
-      if (/^(PRIMARY|FOREIGN|UNIQUE|KEY|INDEX|CONSTRAINT)\s/i.test(line)) continue
+      if (/^(PRIMARY|FOREIGN|UNIQUE\s+KEY|KEY|INDEX|CONSTRAINT)\s/i.test(line)) continue
 
       const colMatch = line.match(/^[`"']?(\w+)[`"']?\s+(\S+)/)
       if (!colMatch) continue
@@ -73,11 +73,12 @@ export function parseSQL(text: string): Schema {
         fkMap[colName] = { table: inlineRef[1], column: inlineRef[2].replace(/[`"']/g, '').trim() }
       }
 
+      const isPK = line.toUpperCase().includes('PRIMARY KEY') || pkInline.includes(colName)
       const col: Column = {
         name: colName,
         type: colType,
-        primaryKey: line.toUpperCase().includes('PRIMARY KEY') || pkInline.includes(colName),
-        nullable: !line.toUpperCase().includes('NOT NULL'),
+        primaryKey: isPK,
+        nullable: isPK ? false : !line.toUpperCase().includes('NOT NULL'),
         unique: line.toUpperCase().includes('UNIQUE'),
         foreignKey: fkMap[colName],
       }

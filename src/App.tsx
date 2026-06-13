@@ -78,6 +78,7 @@ function schemaToFlow(
     data: { table, onEdit } satisfies TableNodeData,
   }))
 
+  const tableMap = new Map(schema.tables.map(t => [t.name, t]))
   const edges: Edge[] = []
   const seen = new Set<string>()
   for (const table of schema.tables) {
@@ -85,11 +86,11 @@ function schemaToFlow(
       if (!col.foreignKey) continue
       const target = col.foreignKey.table
       if (target === table.name) continue
-      if (!schema.tables.find(t => t.name === target)) continue
+      const targetTable = tableMap.get(target)
+      if (!targetTable) continue
       const key = `${table.name}-${target}-${col.name}`
       if (seen.has(key)) continue
       seen.add(key)
-      const targetTable = schema.tables.find(t => t.name === target)
       edges.push({
         id: key, source: table.name, target,
         type: 'fk',
@@ -98,7 +99,7 @@ function schemaToFlow(
           color: '#4b5563',
           relType: getRelType(table, col),
           sourceColor: tagColor(table.tags),
-          targetColor: tagColor(targetTable?.tags),
+          targetColor: tagColor(targetTable.tags),
         } satisfies OrthoEdgeData,
       })
     }
@@ -177,6 +178,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   const [splitView, setSplitView] = useState(false)
   const [editorWidth, setEditorWidth] = useState(380)
+  const editorWidthRef = useRef(380)
+  useEffect(() => { editorWidthRef.current = editorWidth }, [editorWidth])
   const isDraggingRef = useRef(false)
   const dragStartXRef = useRef(0)
   const dragStartWidthRef = useRef(0)
@@ -185,7 +188,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     e.preventDefault()
     isDraggingRef.current = true
     dragStartXRef.current = e.clientX
-    dragStartWidthRef.current = editorWidth
+    dragStartWidthRef.current = editorWidthRef.current
     const onMove = (ev: MouseEvent) => {
       if (!isDraggingRef.current) return
       const delta = ev.clientX - dragStartXRef.current
@@ -198,7 +201,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [editorWidth])
+  }, []) // editorWidth captured via dragStartWidthRef at drag start — no dep needed
 
   const [multiSelectActive, setMultiSelectActive] = useState(false)
   const [highlightTable, setHighlightTable] = useState<string | null>(null)
