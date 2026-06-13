@@ -25,17 +25,15 @@ export function parsePrisma(text: string): Schema {
         if (!scalars.includes(colType.toLowerCase().replace('?',''))) continue
       }
 
+      // relation reference fields (e.g. "user User @relation(...)") are not DB columns
+      if (line.includes('@relation')) continue
+
       const col: Column = {
         name: colName,
         type: colType.replace('?', ''),
         nullable: colType.endsWith('?'),
         primaryKey: line.includes('@id'),
         unique: line.includes('@unique'),
-      }
-
-      const relationMatch = line.match(/@relation\(fields:\s*\[(\w+)\],\s*references:\s*\[(\w+)\].*?(?:,\s*map:\s*"[^"]*")?\)/)
-      if (relationMatch) {
-        // this decorator lives on a different line; handled separately
       }
 
       columns.push(col)

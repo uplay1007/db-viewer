@@ -5,7 +5,6 @@ import {
   type EdgeProps,
 } from '@xyflow/react'
 import { HighlightCtx } from '../contexts/highlight'
-import type { RoutePoint } from '../services/layoutService'
 
 export interface OrthoEdgeData extends Record<string, unknown> {
   label: string
@@ -13,51 +12,13 @@ export interface OrthoEdgeData extends Record<string, unknown> {
   relType?: '1:1' | '1:N' | 'N:M'
   sourceColor?: string
   targetColor?: string
-  points?: RoutePoint[]
 }
 
 const LABEL_OFF = 24
 
-function normDir(a: { x: number; y: number }, b: { x: number; y: number }) {
-  const dx = b.x - a.x, dy = b.y - a.y
-  const len = Math.sqrt(dx * dx + dy * dy) || 1
-  return { dx: dx / len, dy: dy / len }
-}
-
 const POS_DIR: Record<string, { dx: number; dy: number }> = {
   right: { dx: 1, dy: 0 }, left: { dx: -1, dy: 0 },
   top: { dx: 0, dy: -1 }, bottom: { dx: 0, dy: 1 },
-}
-
-function buildOrthoPath(points: RoutePoint[]): string {
-  return 'M ' + points.map(p => `${p.x} ${p.y}`).join(' L ')
-}
-
-function pathMidpoint(points: RoutePoint[]): RoutePoint {
-  if (points.length < 2) return points[0] ?? { x: 0, y: 0 }
-  // Walk cumulative length, return point at 50%
-  let total = 0
-  const segs: number[] = []
-  for (let i = 1; i < points.length; i++) {
-    const dx = points[i].x - points[i - 1].x
-    const dy = points[i].y - points[i - 1].y
-    const len = Math.sqrt(dx * dx + dy * dy)
-    segs.push(len)
-    total += len
-  }
-  let walked = 0
-  const half = total / 2
-  for (let i = 0; i < segs.length; i++) {
-    if (walked + segs[i] >= half) {
-      const t = (half - walked) / segs[i]
-      return {
-        x: points[i].x + t * (points[i + 1].x - points[i].x),
-        y: points[i].y + t * (points[i + 1].y - points[i].y),
-      }
-    }
-    walked += segs[i]
-  }
-  return points[Math.floor(points.length / 2)]
 }
 
 export function OrthoEdge({
@@ -68,7 +29,7 @@ export function OrthoEdge({
   data,
 }: EdgeProps) {
   const [hovered, setHovered] = useState(false)
-  const { label, color, relType, sourceColor, targetColor, points } = (data ?? {}) as OrthoEdgeData
+  const { label, color, relType, sourceColor, targetColor } = (data ?? {}) as OrthoEdgeData
   const hl = useContext(HighlightCtx)
 
   const edgeDimmed      = hl.active && source !== hl.focusTable && target !== hl.focusTable
@@ -78,45 +39,20 @@ export function OrthoEdge({
     ? (source === hl.focusTable ? sourceColor : targetColor) ?? color
     : color
 
-  let edgePath: string
-  let labelX: number
-  let labelY: number
-  let startDot: RoutePoint
-  let endDot: RoutePoint
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX, sourceY, targetX, targetY,
+    sourcePosition, targetPosition,
+    borderRadius: 0,
+  })
 
-  let srcLabelX: number, srcLabelY: number, endLabelX: number, endLabelY: number
-
-  if (points && points.length >= 2) {
-    edgePath = buildOrthoPath(points)
-    const mid = pathMidpoint(points)
-    labelX = mid.x
-    labelY = mid.y
-    startDot = points[0]
-    endDot = points[points.length - 1]
-    const sd = normDir(points[0], points[1])
-    srcLabelX = startDot.x + sd.dx * LABEL_OFF
-    srcLabelY = startDot.y + sd.dy * LABEL_OFF
-    const ed = normDir(points[points.length - 1], points[points.length - 2])
-    endLabelX = endDot.x + ed.dx * LABEL_OFF
-    endLabelY = endDot.y + ed.dy * LABEL_OFF
-  } else {
-    const [path, lx, ly] = getSmoothStepPath({
-      sourceX, sourceY, targetX, targetY,
-      sourcePosition, targetPosition,
-      borderRadius: 0,
-    })
-    edgePath = path
-    labelX = lx
-    labelY = ly
-    startDot = { x: sourceX, y: sourceY }
-    endDot = { x: targetX, y: targetY }
-    const sd = POS_DIR[sourcePosition] ?? { dx: 1, dy: 0 }
-    const td = POS_DIR[targetPosition] ?? { dx: -1, dy: 0 }
-    srcLabelX = startDot.x + sd.dx * LABEL_OFF
-    srcLabelY = startDot.y + sd.dy * LABEL_OFF
-    endLabelX = endDot.x + td.dx * LABEL_OFF
-    endLabelY = endDot.y + td.dy * LABEL_OFF
-  }
+  const startDot = { x: sourceX, y: sourceY }
+  const endDot   = { x: targetX, y: targetY }
+  const sd = POS_DIR[sourcePosition] ?? { dx: 1, dy: 0 }
+  const td = POS_DIR[targetPosition] ?? { dx: -1, dy: 0 }
+  const srcLabelX = startDot.x + sd.dx * LABEL_OFF
+  const srcLabelY = startDot.y + sd.dy * LABEL_OFF
+  const endLabelX = endDot.x + td.dx * LABEL_OFF
+  const endLabelY = endDot.y + td.dy * LABEL_OFF
 
   const srcLabel = relType === '1:1' ? '1' : 'n'
   const endLabel = relType === 'N:M' ? 'm' : '1'
