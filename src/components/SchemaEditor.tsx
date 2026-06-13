@@ -40,9 +40,11 @@ const schemaLang = StreamLanguage.define<Record<string, never>>({
 interface Props {
   schema: Schema
   onSchemaChange: (schema: Schema) => void
+  width?: number
 }
 
-export function SchemaEditor({ schema, onSchemaChange }: Props) {
+export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
+  const fontSize = Math.max(11, Math.min(16, Math.round(13 * width / 380)))
   const schemaRef = useRef(schema)
   schemaRef.current = schema
 
@@ -261,7 +263,7 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
           onCreateEditor={view => { editorViewRef.current = view }}
           extensions={[schemaLang]}
           theme={oneDark}
-          style={{ fontSize: 13 }}
+          style={{ fontSize }}
           basicSetup={{
             lineNumbers: true,
             foldGutter: false,

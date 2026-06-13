@@ -553,7 +553,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
             {splitView ? (
               <>
                 <div style={{ width: editorWidth, height: '100%', flexShrink: 0, overflow: 'hidden' }}>
-                  <SchemaEditor schema={schema} onSchemaChange={handleSchemaFromEditor} />
+                  <SchemaEditor schema={schema} onSchemaChange={handleSchemaFromEditor} width={editorWidth} />
                 </div>
                 {/* Resize handle */}
                 <div
