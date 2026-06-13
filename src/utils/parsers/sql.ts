@@ -30,8 +30,10 @@ export function parseSQL(text: string): Schema {
     tagsMap[tableName] = tags
   }
 
-  // strip comments
-  const clean = text.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  // strip comments, skipping string literals so DEFAULT '--val' is not truncated
+  const clean = text
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/'[^']*'|--[^\n]*/g, m => m.startsWith("'") ? m : '')
 
   const createRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?(\w+)[`"']?\s*\(([^;]+)\)/gi
   let m: RegExpExecArray | null
