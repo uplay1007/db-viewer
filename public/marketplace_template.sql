@@ -168,8 +168,10 @@ CREATE TABLE tags (
 );
 
 CREATE TABLE product_tags (
-  product_id INTEGER PRIMARY KEY,
-  tag_id INTEGER PRIMARY KEY,
+  product_id INTEGER NOT NULL,
+  tag_id INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (product_id, tag_id),
   FOREIGN KEY (product_id) REFERENCES products(id),
   FOREIGN KEY (tag_id) REFERENCES tags(id)
 );
