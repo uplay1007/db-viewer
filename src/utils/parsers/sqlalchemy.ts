@@ -19,7 +19,7 @@ export function parseSQLAlchemy(text: string): Schema {
     const body = m[2]
     const columns: Column[] = []
 
-    const colRegex = /(\w+)\s*(?::\s*\w+\s*)?=\s*(?:mapped_column|Column)\(([^)]*)\)/g
+    const colRegex = /(\w+)\s*(?::\s*\w+\s*)?=\s*(?:mapped_column|Column)\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g
     let c: RegExpExecArray | null
 
     while ((c = colRegex.exec(body)) !== null) {

@@ -45,20 +45,18 @@ function getComponents(schema: Schema): string[][] {
 
 export interface RoutePoint { x: number; y: number }
 export type NodePositions = Record<string, { x: number; y: number }>
-export type EdgeRoutes = Record<string, RoutePoint[]>
 
 export async function computeELKLayout(
   schema: Schema,
   measuredHeights?: Record<string, number>,
   filterTableNames?: Set<string>,
-): Promise<{ positions: NodePositions; routes: EdgeRoutes }> {
+): Promise<{ positions: NodePositions }> {
   const elk = new ELK()
   const filteredSchema = filterTableNames
     ? { ...schema, tables: schema.tables.filter(t => filterTableNames.has(t.name)) }
     : schema
   const components = getComponents(filteredSchema)
   const allPositions: NodePositions = {}
-  const allRoutes: EdgeRoutes = {}
 
   let curX = 0, curY = 0, rowH = 0
 
@@ -113,17 +111,6 @@ export async function computeELKLayout(
       compPositions[node.id] = { x: node.x ?? 0, y: node.y ?? 0 }
     }
 
-    const compRoutes: EdgeRoutes = {}
-    for (const edge of (result.edges ?? []) as ElkExtendedEdge[]) {
-      const section = edge.sections?.[0]
-      if (!section) continue
-      compRoutes[edge.id] = [
-        section.startPoint,
-        ...(section.bendPoints ?? []),
-        section.endPoint,
-      ]
-    }
-
     if (nodes.length === 0) continue
 
     const nodeRects = nodes.map(n => ({
@@ -153,13 +140,9 @@ export async function computeELKLayout(
     for (const [id, pos] of Object.entries(compPositions)) {
       allPositions[id] = { x: pos.x + offsetX, y: pos.y + offsetY }
     }
-    for (const [eid, pts] of Object.entries(compRoutes)) {
-      allRoutes[eid] = pts.map(p => ({ x: p.x + offsetX, y: p.y + offsetY }))
-    }
-
     curX += w + COMP_GAP_X
     rowH = Math.max(rowH, h)
   }
 
-  return { positions: allPositions, routes: allRoutes }
+  return { positions: allPositions }
 }
