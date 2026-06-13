@@ -21,7 +21,6 @@ import { computeLayout } from './utils/layout'
 import { tableColor, tagColor } from './utils/colors'
 import {
   saveCurrentSession, loadCurrentSession, clearCurrentSession,
-  saveDB, getSaves,
 } from './utils/storage'
 import { TableNode, type TableNodeData, MultiSelectCtx } from './components/TableNode'
 import { HighlightCtx, type HighlightCtxValue } from './contexts/highlight'
@@ -37,6 +36,9 @@ import { writeToHandle } from './utils/fileAccess'
 import { exportSQL } from './utils/parsers/sql'
 import { T, type Lang } from './i18n'
 import { DialogProvider, useDialog } from './contexts/DialogContext'
+import { useAuth } from './contexts/AuthContext'
+import { AuthScreen } from './components/AuthScreen'
+import { upsertSave } from './services/schemasAPI'
 
 const NODE_TYPES = { table: TableNode }
 const EDGE_TYPES = { fk: OrthoEdge }
@@ -133,6 +135,16 @@ function downloadSQL(schema: Schema) {
 
 export default function App() {
   const [lang, setLang] = useState<Lang>('en')
+  const { user, loading } = useAuth()
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#0f1117', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ color: '#4b5563', fontSize: 14 }}>Loading...</span>
+    </div>
+  )
+
+  if (!user) return <AuthScreen />
+
   return (
     <DialogProvider lang={lang}>
       <AppContent lang={lang} setLang={setLang} />
@@ -146,6 +158,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   const [schema, setSchema] = useState<Schema | null>(session?.schema ?? null)
   const [currentSaveId, setCurrentSaveId] = useState<string | undefined>(session?.saveId)
+  const currentSaveName = useRef<string | null>(null)
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
   
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
@@ -465,13 +478,15 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     }
 
     if (currentSaveId) {
-      saveDB(getSaves().find(s => s.id === currentSaveId)?.name ?? 'schema', schema, posMap, currentSaveId)
+      const existingName = currentSaveName.current ?? 'schema'
+      await upsertSave(existingName, schema, posMap, currentSaveId)
     } else if (!fileHandle) {
       const defaultName = schema.tables.map(tb => tb.name).slice(0, 2).join(', ') + (schema.tables.length > 2 ? '…' : '')
       const name = await dialog.prompt(lang === 'ru' ? 'Название сохранения' : 'Save name', t.saveNamePrompt, defaultName)
       if (!name) return
-      const saved = saveDB(name, schema, posMap)
+      const saved = await upsertSave(name, schema, posMap)
       setCurrentSaveId(saved.id)
+      currentSaveName.current = name
     }
 
     setSaveFlash(true)
@@ -538,6 +553,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setHighlightTable(null)
     setTagFilter(null)
     setCurrentSaveId(result.savedId)
+    currentSaveName.current = result.savedName ?? null
     setFileHandle(result.fileHandle ?? null)
     applySchema(result.schema, undefined, result.positions)
     setActiveTab('schema')

@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { parseSchema, detectParser, type ParserType } from '../utils/parsers'
-import { getSaves, deleteDB, type SavedDB } from '../utils/storage'
 import { openFilePicker, getHandleFromDrop, supportsFileSystemAccess } from '../utils/fileAccess'
+import { fetchSaves, deleteSave, type RemoteSave } from '../services/schemasAPI'
+import { useAuth } from '../contexts/AuthContext'
 import type { Schema } from '../types/schema'
 import { T, type Lang } from '../i18n'
 import { tableColor } from '../utils/colors'
@@ -11,6 +12,7 @@ export interface OpenResult {
   schema: Schema
   fileHandle?: FileSystemFileHandle
   savedId?: string
+  savedName?: string
   positions?: Record<string, { x: number; y: number }>
 }
 
@@ -38,13 +40,22 @@ function fmtDate(iso: string, lang: Lang) {
 export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
   const t = T[lang]
   const dialog = useDialog()
+  const { signOut, user } = useAuth()
   const [parserType, setParserType] = useState<ParserType>('json')
   const [text, setText] = useState('')
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
-  const [saves, setSaves] = useState<SavedDB[]>(() => getSaves())
+  const [saves, setSaves] = useState<RemoteSave[]>([])
+  const [savesLoading, setSavesLoading] = useState(true)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const hasFileAccess = supportsFileSystemAccess()
+
+  useEffect(() => {
+    fetchSaves()
+      .then(setSaves)
+      .catch(() => setSaves([]))
+      .finally(() => setSavesLoading(false))
+  }, [])
 
   const processText = useCallback(async (content: string, type: ParserType, handle?: FileSystemFileHandle) => {
     try {
@@ -52,7 +63,7 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
       if (!schema.tables.length) throw new Error('No tables found')
       
       const fileName = handle?.name.replace(/\.[^.]+$/, '')
-      const existing = saves.find(s => s.name === fileName)
+      const existing = fileName ? saves.find(s => s.name === fileName) : undefined
       
       if (existing) {
         const ok = await dialog.confirm(
@@ -108,8 +119,9 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
 
   const handleDeleteSave = (id: string) => {
     if (confirmDeleteId === id) {
-      deleteDB(id)
-      setSaves(getSaves())
+      deleteSave(id)
+        .then(() => setSaves(s => s.filter(x => x.id !== id)))
+        .catch(() => {})
       setConfirmDeleteId(null)
     } else {
       setConfirmDeleteId(id)
@@ -121,9 +133,15 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
     <div style={{ minHeight: '100vh', background: '#0f1117', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <span style={{ color: 'white', fontWeight: 800, fontSize: 22, letterSpacing: 0.5 }}>DB Viewer</span>
-        <button onClick={onLangToggle} style={{ fontSize: 14, fontWeight: 600, padding: '7px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', color: '#9ca3af', background: 'transparent', cursor: 'pointer' }}>
-          {lang === 'en' ? 'RU' : 'EN'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ color: '#4b5563', fontSize: 13 }}>{user?.email}</span>
+          <button onClick={signOut} style={{ fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', color: '#6b7280', background: 'transparent', cursor: 'pointer' }}>
+            Sign out
+          </button>
+          <button onClick={onLangToggle} style={{ fontSize: 14, fontWeight: 600, padding: '7px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', color: '#9ca3af', background: 'transparent', cursor: 'pointer' }}>
+            {lang === 'en' ? 'RU' : 'EN'}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flex: 1, gap: 48, padding: '48px 48px', maxWidth: 1400, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
@@ -191,7 +209,11 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
             <p style={{ color: '#6b7280', fontSize: 16, marginTop: 6, marginBottom: 0 }}>{t.savedAt}</p>
           </div>
 
-          {saves.length === 0 ? (
+          {savesLoading ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: '#4b5563', fontSize: 14 }}>Loading...</span>
+            </div>
+          ) : saves.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed rgba(255,255,255,0.07)', borderRadius: 20, padding: 60, gap: 14 }}>
               <span style={{ fontSize: 52 }}>🗄️</span>
               <span style={{ color: '#4b5563', fontSize: 15, textAlign: 'center' }}>{t.noSaves}</span>
@@ -204,19 +226,16 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
                   <div key={save.id} style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.1)', padding: '18px 20px', background: 'rgba(255,255,255,0.03)' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                       <span style={{ color: 'white', fontWeight: 700, fontSize: 17, flex: 1 }}>{save.name}</span>
-                      <button 
-                        onClick={() => handleDeleteSave(save.id)} 
-                        style={{ 
-                          fontSize: isConfirming ? 12 : 17, 
-                          background: isConfirming ? '#ef4444' : 'none', 
-                          border: 'none', 
-                          cursor: 'pointer', 
-                          color: isConfirming ? 'white' : '#4b5563', 
-                          marginLeft: 8, 
-                          padding: isConfirming ? '4px 8px' : 0,
-                          borderRadius: 6,
-                          fontWeight: isConfirming ? 700 : 400,
-                          transition: 'all 0.2s'
+                      <button
+                        onClick={() => handleDeleteSave(save.id)}
+                        style={{
+                          fontSize: isConfirming ? 12 : 17,
+                          background: isConfirming ? '#ef4444' : 'none',
+                          border: 'none', cursor: 'pointer',
+                          color: isConfirming ? 'white' : '#4b5563',
+                          marginLeft: 8, padding: isConfirming ? '4px 8px' : 0,
+                          borderRadius: 6, fontWeight: isConfirming ? 700 : 400,
+                          transition: 'all 0.2s',
                         }}
                       >
                         {isConfirming ? (lang === 'ru' ? 'Удалить?' : 'Confirm?') : '🗑️'}
@@ -231,8 +250,8 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#4b5563', fontSize: 12 }}>{fmtDate(save.savedAt, lang)}</span>
-                      <button onClick={() => onOpen({ schema: save.schema, savedId: save.id, positions: save.positions })} style={{ fontSize: 14, fontWeight: 700, padding: '8px 20px', borderRadius: 10, background: '#6366f1', color: 'white', border: 'none', cursor: 'pointer' }}>
+                      <span style={{ color: '#4b5563', fontSize: 12 }}>{fmtDate(save.saved_at, lang)}</span>
+                      <button onClick={() => onOpen({ schema: save.schema, savedId: save.id, savedName: save.name, positions: save.positions })} style={{ fontSize: 14, fontWeight: 700, padding: '8px 20px', borderRadius: 10, background: '#6366f1', color: 'white', border: 'none', cursor: 'pointer' }}>
                         {t.open}
                       </button>
                     </div>
