@@ -58,6 +58,7 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
   const [searchOpen, setSearchOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
+  const [visibleCount, setVisibleCount] = useState(12)
 
   // Push external schema changes into editor when not focused
   useEffect(() => {
@@ -126,8 +127,8 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
     if (e.key === 'Enter' && searchResults[selectedIdx]) scrollToTable(searchResults[selectedIdx])
   }, [searchResults, selectedIdx, scrollToTable])
 
-  // Reset selection when query changes
-  useEffect(() => { setSelectedIdx(0) }, [searchQuery])
+  // Reset selection and visible count when query changes
+  useEffect(() => { setSelectedIdx(0); setVisibleCount(12) }, [searchQuery])
 
   // Focus search input when opened
   useEffect(() => { if (searchOpen) searchRef.current?.focus() }, [searchOpen])
@@ -201,7 +202,7 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
               boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
               maxHeight: 220, overflowY: 'auto',
             }}>
-              {searchResults.slice(0, 12).map((name, i) => (
+              {searchResults.slice(0, visibleCount).map((name, i) => (
                 <button
                   key={name}
                   onMouseDown={() => scrollToTable(name)}
@@ -219,9 +220,21 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
                   {name}
                 </button>
               ))}
-              {searchResults.length > 12 && (
-                <div style={{ padding: '5px 12px', fontSize: 10, color: '#374151' }}>
-                  +{searchResults.length - 12} more...
+              {searchResults.length > visibleCount && (
+                <div style={{ padding: '5px 12px 7px', display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <button
+                    onMouseDown={e => { e.preventDefault(); setVisibleCount(c => c + 5) }}
+                    style={{
+                      background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)',
+                      borderRadius: 4, color: '#818cf8', cursor: 'pointer', fontSize: 10,
+                      fontWeight: 600, padding: '2px 8px',
+                    }}
+                  >
+                    Show +5
+                  </button>
+                  <span style={{ fontSize: 10, color: '#374151' }}>
+                    +{searchResults.length - visibleCount} more...
+                  </span>
                 </div>
               )}
             </div>
