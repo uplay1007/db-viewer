@@ -16,7 +16,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import type { Schema, Table } from './types/schema'
+import type { Schema, Table, Column } from './types/schema'
 import { computeLayout } from './utils/layout'
 import { tableColor, tagColor } from './utils/colors'
 import {
@@ -41,6 +41,13 @@ import { DialogProvider, useDialog } from './contexts/DialogContext'
 const NODE_TYPES = { table: TableNode }
 const EDGE_TYPES = { fk: OrthoEdge }
 const TAB_H = 58
+
+function getRelType(table: Table, col: Column): '1:1' | '1:N' | 'N:M' {
+  if (col.unique) return '1:1'
+  const fkCols = table.columns.filter(c => c.foreignKey)
+  if (fkCols.length >= 2 && fkCols.length >= table.columns.length - 1) return 'N:M'
+  return '1:N'
+}
 
 function schemaToFlow(
   schema: Schema,
@@ -89,6 +96,7 @@ function schemaToFlow(
         data: {
           label: `${col.name} → ${col.foreignKey.column}`,
           color: '#4b5563',
+          relType: getRelType(table, col),
           sourceColor: tagColor(table.tags),
           targetColor: tagColor(targetTable?.tags),
         } satisfies OrthoEdgeData,

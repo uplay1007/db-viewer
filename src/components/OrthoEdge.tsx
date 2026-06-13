@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react'
+import React, { useState, useContext } from 'react'
 import {
   getSmoothStepPath,
   EdgeLabelRenderer,
@@ -10,9 +10,23 @@ import type { RoutePoint } from '../services/layoutService'
 export interface OrthoEdgeData extends Record<string, unknown> {
   label: string
   color: string
+  relType?: '1:1' | '1:N' | 'N:M'
   sourceColor?: string
   targetColor?: string
   points?: RoutePoint[]
+}
+
+const LABEL_OFF = 24
+
+function normDir(a: { x: number; y: number }, b: { x: number; y: number }) {
+  const dx = b.x - a.x, dy = b.y - a.y
+  const len = Math.sqrt(dx * dx + dy * dy) || 1
+  return { dx: dx / len, dy: dy / len }
+}
+
+const POS_DIR: Record<string, { dx: number; dy: number }> = {
+  right: { dx: 1, dy: 0 }, left: { dx: -1, dy: 0 },
+  top: { dx: 0, dy: -1 }, bottom: { dx: 0, dy: 1 },
 }
 
 function buildOrthoPath(points: RoutePoint[]): string {
@@ -54,7 +68,7 @@ export function OrthoEdge({
   data,
 }: EdgeProps) {
   const [hovered, setHovered] = useState(false)
-  const { label, color, sourceColor, targetColor, points } = (data ?? {}) as OrthoEdgeData
+  const { label, color, relType, sourceColor, targetColor, points } = (data ?? {}) as OrthoEdgeData
   const hl = useContext(HighlightCtx)
 
   const edgeDimmed      = hl.active && source !== hl.focusTable && target !== hl.focusTable
@@ -70,6 +84,8 @@ export function OrthoEdge({
   let startDot: RoutePoint
   let endDot: RoutePoint
 
+  let srcLabelX: number, srcLabelY: number, endLabelX: number, endLabelY: number
+
   if (points && points.length >= 2) {
     edgePath = buildOrthoPath(points)
     const mid = pathMidpoint(points)
@@ -77,6 +93,12 @@ export function OrthoEdge({
     labelY = mid.y
     startDot = points[0]
     endDot = points[points.length - 1]
+    const sd = normDir(points[0], points[1])
+    srcLabelX = startDot.x + sd.dx * LABEL_OFF
+    srcLabelY = startDot.y + sd.dy * LABEL_OFF
+    const ed = normDir(points[points.length - 1], points[points.length - 2])
+    endLabelX = endDot.x + ed.dx * LABEL_OFF
+    endLabelY = endDot.y + ed.dy * LABEL_OFF
   } else {
     const [path, lx, ly] = getSmoothStepPath({
       sourceX, sourceY, targetX, targetY,
@@ -88,7 +110,16 @@ export function OrthoEdge({
     labelY = ly
     startDot = { x: sourceX, y: sourceY }
     endDot = { x: targetX, y: targetY }
+    const sd = POS_DIR[sourcePosition] ?? { dx: 1, dy: 0 }
+    const td = POS_DIR[targetPosition] ?? { dx: -1, dy: 0 }
+    srcLabelX = startDot.x + sd.dx * LABEL_OFF
+    srcLabelY = startDot.y + sd.dy * LABEL_OFF
+    endLabelX = endDot.x + td.dx * LABEL_OFF
+    endLabelY = endDot.y + td.dy * LABEL_OFF
   }
+
+  const srcLabel = relType === '1:1' ? '1' : 'n'
+  const endLabel = relType === 'N:M' ? 'm' : '1'
 
   return (
     <>
@@ -128,6 +159,26 @@ export function OrthoEdge({
         opacity={edgeDimmed ? 0.06 : 1} style={{ pointerEvents: 'none' }} />
       <circle cx={endDot.x} cy={endDot.y} r={edgeHighlighted ? 5 : 4} fill={activeColor}
         opacity={edgeDimmed ? 0.06 : 1} style={{ pointerEvents: 'none' }} />
+
+      {/* Relationship type labels */}
+      {relType && !edgeDimmed && (
+        <>
+          <text x={srcLabelX} y={srcLabelY} textAnchor="middle" dominantBaseline="middle"
+            fontSize={10} fontWeight={700} fontFamily="monospace"
+            stroke="#0d0f17" strokeWidth={3} paintOrder="stroke"
+            fill={activeColor} opacity={edgeHighlighted ? 1 : 0.7}
+            style={{ pointerEvents: 'none', userSelect: 'none' } as React.CSSProperties}>
+            {srcLabel}
+          </text>
+          <text x={endLabelX} y={endLabelY} textAnchor="middle" dominantBaseline="middle"
+            fontSize={10} fontWeight={700} fontFamily="monospace"
+            stroke="#0d0f17" strokeWidth={3} paintOrder="stroke"
+            fill={activeColor} opacity={edgeHighlighted ? 1 : 0.7}
+            style={{ pointerEvents: 'none', userSelect: 'none' } as React.CSSProperties}>
+            {endLabel}
+          </text>
+        </>
+      )}
 
       {/* Label */}
       <EdgeLabelRenderer>
