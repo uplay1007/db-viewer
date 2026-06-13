@@ -37,6 +37,9 @@ export function parseDjango(text: string): Schema {
       const djangoType = f[2]
       const args = f[3]
 
+      // ManyToManyField creates a junction table, not a column — skip
+      if (djangoType === 'ManyToManyField') continue
+
       const isFK = djangoType === 'ForeignKey' || djangoType === 'OneToOneField'
       const refMatch = args.match(/^'?(\w+)'?/)
       const nullableMatch = args.includes('null=True')
