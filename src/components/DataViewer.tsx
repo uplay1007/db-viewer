@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import type { Schema } from '../types/schema'
 import { tableColor } from '../utils/colors'
 import { T, type Lang } from '../i18n'
@@ -72,8 +72,15 @@ function EditableCell({
 
 export function DataViewer({ schema, lang, onDataChange }: Props) {
   const t = T[lang]
-  const [selectedTable, setSelectedTable] = useState(schema.tables[0]?.name ?? '')
+  const tableNames = useMemo(() => schema.tables.map(t => t.name), [schema.tables])
+  const [selectedTable, setSelectedTable] = useState(tableNames[0] ?? '')
   const [sizeIdx, setSizeIdx] = useState(DEFAULT_SIZE_IDX)
+
+  useEffect(() => {
+    if (!tableNames.includes(selectedTable)) {
+      setSelectedTable(tableNames[0] ?? '')
+    }
+  }, [tableNames, selectedTable])
   const fontSize = FONT_SIZES[sizeIdx]
   const rowH = Math.round(fontSize * 2.8)
 

@@ -12,6 +12,8 @@ export function detectParser(filename: string): ParserType {
   if (filename.endsWith('.prisma')) return 'prisma'
   if (filename.endsWith('.sql')) return 'sql'
   if (filename.endsWith('.json')) return 'json'
+  if (filename.endsWith('.ts')) return 'typeorm'
+  if (filename.endsWith('.py')) return 'django'
   return 'json'
 }
 

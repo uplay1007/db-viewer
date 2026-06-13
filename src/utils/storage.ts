@@ -79,11 +79,3 @@ export function deleteDB(id: string) {
   localStorage.setItem(SAVES_KEY, JSON.stringify(saves))
 }
 
-// legacy compat aliases
-export const saveSchema = (schema: Schema) =>
-  saveCurrentSession({ schema, positions: loadCurrentSession()?.positions ?? {} })
-export const loadSchema = () => loadCurrentSession()?.schema ?? null
-export const savePositions = (positions: Record<string, { x: number; y: number }>) =>
-  saveCurrentSession({ schema: loadCurrentSession()?.schema ?? { tables: [] }, positions })
-export const loadPositions = () => loadCurrentSession()?.positions ?? {}
-export const clearStorage = clearCurrentSession

@@ -42,18 +42,16 @@ export function parsePrisma(text: string): Schema {
     }
 
     // second pass: wire FK from @relation
+    // each relation line sits below the relation field line: "fieldName  ModelType @relation(...)"
     const bodyLines = body.split('\n').map(l => l.trim()).filter(Boolean)
     for (const line of bodyLines) {
       const rel = line.match(/@relation\(fields:\s*\[(\w+)\],\s*references:\s*\[(\w+)\]/)
       if (!rel) continue
       const fieldName = rel[1]
       const refCol = rel[2]
-      // find the model this field points to
-      const modelField = bodyLines.find(l => {
-        const p = l.split(/\s+/)
-        return p[0] && /^[A-Z]/.test(p[1] ?? '')
-      })
-      const refTable = modelField?.split(/\s+/)[1]?.replace('?','').replace('[]','') ?? ''
+      // refTable is the type on the SAME line as @relation
+      const parts = line.split(/\s+/)
+      const refTable = parts[1]?.replace('?', '').replace('[]', '') ?? ''
       const col = columns.find(c => c.name === fieldName)
       if (col && refTable) col.foreignKey = { table: refTable, column: refCol }
     }
