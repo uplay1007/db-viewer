@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { Table, Column, Schema } from '../types/schema'
 import { tableColor, tagColor } from '../utils/colors'
 import { T, type Lang } from '../i18n'
@@ -60,16 +60,6 @@ export function TableEditor({ table, schema, lang, onSave, onClose }: Props) {
   const [tagInput, setTagInput] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [fkPickerRow, setFkPickerRow] = useState<number | null>(null)
-
-  // Sync local state when table prop changes (guards against stale state if component isn't remounted)
-  useEffect(() => {
-    setName(table?.name ?? '')
-    setColumns(table ? [...table.columns] : [{ name: 'id', type: 'integer', primaryKey: true, nullable: false }])
-    setTags(table?.tags ?? [])
-    setNameError('')
-    setTagInput('')
-    setIsDirty(false)
-  }, [table])
 
   const handleClose = async () => {
     if (isDirty) {

@@ -55,6 +55,10 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
 
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [])
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)

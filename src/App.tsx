@@ -444,6 +444,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       } catch (e) {
         console.warn('File write failed, falling back to download', e)
         downloadSQL(schema)
+        dialog.alert(
+          lang === 'ru' ? 'Ошибка записи' : 'Write failed',
+          lang === 'ru' ? 'Не удалось сохранить в файл. Схема скачана как копия.' : 'Could not write to file. Schema downloaded as a copy instead.'
+        )
+        return
       }
     }
 
