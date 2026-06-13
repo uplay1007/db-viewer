@@ -7,6 +7,7 @@ import {
   SelectionMode,
   useNodesState,
   useEdgesState,
+  useNodesInitialized,
   type Node,
   type Edge,
   type OnSelectionChangeParams,
@@ -21,7 +22,6 @@ import { computeLayout } from './utils/layout'
 import { tableColor, tagColor } from './utils/colors'
 import {
   saveCurrentSession, loadCurrentSession, clearCurrentSession,
-  saveDB, getSaves,
 } from './utils/storage'
 import { TableNode, type TableNodeData, MultiSelectCtx } from './components/TableNode'
 import { HighlightCtx, type HighlightCtxValue } from './contexts/highlight'
@@ -37,10 +37,21 @@ import { writeToHandle } from './utils/fileAccess'
 import { exportSQL } from './utils/parsers/sql'
 import { T, type Lang } from './i18n'
 import { DialogProvider, useDialog } from './contexts/DialogContext'
+import { useAuth } from './contexts/AuthContext'
+import { AuthScreen } from './components/AuthScreen'
+import { upsertSave } from './services/schemasAPI'
 
 const NODE_TYPES = { table: TableNode }
 const EDGE_TYPES = { fk: OrthoEdge }
 const TAB_H = 58
+
+function NodesInitializedFitView({ rfRef }: { rfRef: React.RefObject<ReactFlowInstance<any, any> | null> }) {
+  const initialized = useNodesInitialized()
+  useEffect(() => {
+    if (initialized) rfRef.current?.fitView({ padding: 0.2, duration: 300 })
+  }, [initialized, rfRef])
+  return null
+}
 
 function getRelType(table: Table, col: Column): '1:1' | '1:N' | 'N:M' {
   if (col.unique) return '1:1'
@@ -133,6 +144,16 @@ function downloadSQL(schema: Schema) {
 
 export default function App() {
   const [lang, setLang] = useState<Lang>('en')
+  const { user, loading } = useAuth()
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#0f1117', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ color: '#4b5563', fontSize: 14 }}>Loading...</span>
+    </div>
+  )
+
+  if (!user) return <AuthScreen />
+
   return (
     <DialogProvider lang={lang}>
       <AppContent lang={lang} setLang={setLang} />
@@ -146,6 +167,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   const [schema, setSchema] = useState<Schema | null>(session?.schema ?? null)
   const [currentSaveId, setCurrentSaveId] = useState<string | undefined>(session?.saveId)
+  const currentSaveName = useRef<string | null>(null)
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
   
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
@@ -464,14 +486,25 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       }
     }
 
-    if (currentSaveId) {
-      saveDB(getSaves().find(s => s.id === currentSaveId)?.name ?? 'schema', schema, posMap, currentSaveId)
-    } else if (!fileHandle) {
-      const defaultName = schema.tables.map(tb => tb.name).slice(0, 2).join(', ') + (schema.tables.length > 2 ? '…' : '')
-      const name = await dialog.prompt(lang === 'ru' ? 'Название сохранения' : 'Save name', t.saveNamePrompt, defaultName)
-      if (!name) return
-      const saved = saveDB(name, schema, posMap)
-      setCurrentSaveId(saved.id)
+    try {
+      if (currentSaveId && currentSaveName.current) {
+        await upsertSave(currentSaveName.current, schema, posMap, currentSaveId)
+      } else {
+        // use filename (without extension) as default name when opening a file
+        const fileDefault = fileHandle?.name.replace(/\.[^.]+$/, '')
+        const defaultName = fileDefault ?? schema.tables.map(tb => tb.name).slice(0, 2).join(', ') + (schema.tables.length > 2 ? '…' : '')
+        const name = await dialog.prompt(lang === 'ru' ? 'Название сохранения' : 'Save name', t.saveNamePrompt, defaultName)
+        if (!name) return
+        const saved = await upsertSave(name, schema, posMap)
+        setCurrentSaveId(saved.id)
+        currentSaveName.current = name
+      }
+    } catch (e) {
+      dialog.alert(
+        lang === 'ru' ? 'Ошибка сохранения' : 'Save failed',
+        (e as Error).message
+      )
+      return
     }
 
     setSaveFlash(true)
@@ -538,6 +571,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setHighlightTable(null)
     setTagFilter(null)
     setCurrentSaveId(result.savedId)
+    currentSaveName.current = result.savedName ?? null
     setFileHandle(result.fileHandle ?? null)
     applySchema(result.schema, undefined, result.positions)
     setActiveTab('schema')
@@ -665,7 +699,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
               <ViewModeCtx.Provider value={{ mode: viewMode, bulkExpand, bulkKey }}>
                 <HighlightCtx.Provider value={highlightCtxValue}>
                   <MultiSelectCtx.Provider value={multiSelectActive}>
-                    <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}>
+                    <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}><NodesInitializedFitView rfRef={rfInstanceRef} />
                       <Background color="#1a1d27" gap={20} />
                       <Controls showInteractive={false} className="!bg-[#1a1d27] !border-white/10 !rounded-xl !overflow-hidden !shadow-2xl" />
                       <MiniMap style={{ background: '#13151f', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }} nodeColor={n => tagColor((n.data as { table?: { tags?: string[] } }).table?.tags)} maskColor="rgba(0,0,0,0.6)" />
