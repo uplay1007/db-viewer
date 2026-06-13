@@ -437,13 +437,25 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     const posMap = { ...masterPositionsRef.current }
 
     if (fileHandle) {
+      const isSql  = fileHandle.name.endsWith('.sql')
+      const isJson = fileHandle.name.endsWith('.json')
+      if (!isSql && !isJson) {
+        // source format (Prisma/TypeORM/Django/SQLAlchemy) — can't round-trip, download JSON copy
+        exportJSON(schema)
+        dialog.alert(
+          lang === 'ru' ? 'Формат файла' : 'File format',
+          lang === 'ru'
+            ? `Файл "${fileHandle.name}" нельзя перезаписать (формат не поддерживает экспорт). Схема скачана как JSON.`
+            : `"${fileHandle.name}" cannot be overwritten (export not supported for this format). Schema downloaded as JSON.`
+        )
+        return
+      }
       try {
-        const isSql = fileHandle.name.endsWith('.sql')
         const content = isSql ? exportSQL(schema) : JSON.stringify(schema, null, 2)
         await writeToHandle(fileHandle, content)
       } catch (e) {
         console.warn('File write failed, falling back to download', e)
-        downloadSQL(schema)
+        exportJSON(schema)
         dialog.alert(
           lang === 'ru' ? 'Ошибка записи' : 'Write failed',
           lang === 'ru' ? 'Не удалось сохранить в файл. Схема скачана как копия.' : 'Could not write to file. Schema downloaded as a copy instead.'
@@ -476,7 +488,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     return () => window.removeEventListener('keydown', onKey)
   }, [handleSave])
 
-  const handleExit = useCallback(() => { clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined); setFileHandle(null); setTagFilter(null) }, [])
+  const handleExit = useCallback(() => { clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined); setFileHandle(null); setTagFilter(null); setEditorState(null) }, [])
 
   const handleEditorSave = useCallback((updated: Table, originalName: string | null) => {
     if (!schema) return
@@ -498,6 +510,13 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         }
         return tb
       })
+    }
+    if (originalName && originalName !== updated.name) {
+      const pos = masterPositionsRef.current[originalName]
+      if (pos) {
+        masterPositionsRef.current[updated.name] = pos
+        delete masterPositionsRef.current[originalName]
+      }
     }
     setEditorState(null)
     applySchema({ ...schema, tables: newTables }, undefined, masterPositionsRef.current)
