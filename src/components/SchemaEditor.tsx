@@ -1,8 +1,40 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
-import { json } from '@codemirror/lang-json'
+import { StreamLanguage } from '@codemirror/language'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { schemaToDSL, dslToSchema } from '../utils/schemaDSL'
 import type { Schema } from '../types/schema'
+
+// ── Minimal DSL syntax highlighting ──────────────────────────────────────────
+
+const KEYWORDS = new Set(['Table'])
+const MODIFIERS = new Set(['pk', 'unique', 'null'])
+
+const schemaLang = StreamLanguage.define<Record<string, never>>({
+  startState: () => ({}),
+  token(stream) {
+    if (stream.eatSpace()) return null
+    if (stream.match(/\/\/[^\n]*/)) return 'comment'
+    if (stream.match(/--[^\n]*/)) return 'comment'
+    if (stream.eat('{') || stream.eat('}')) return 'bracket'
+    if (stream.eat('>')) return 'operator'
+    if (stream.match(/[\w]+(?:\([^)]*\))?(?:\.\w+)*/)) {
+      const w = stream.current()
+      if (KEYWORDS.has(w)) return 'keyword'
+      if (MODIFIERS.has(w)) return 'typeName'
+      return null
+    }
+    stream.next()
+    return null
+  },
+  blankLine() {},
+  copyState: s => ({ ...s }),
+  indent: () => null,
+  languageData: {},
+  tokenTable: {},
+})
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   schema: Schema
@@ -10,16 +42,19 @@ interface Props {
 }
 
 export function SchemaEditor({ schema, onSchemaChange }: Props) {
-  const [text, setText] = useState(() => JSON.stringify(schema, null, 2))
+  const schemaRef = useRef(schema)
+  schemaRef.current = schema
+
+  const [text, setText] = useState(() => schemaToDSL(schema))
   const [error, setError] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
   const isFocused = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Push schema changes (from visual edits) into editor when not focused
+  // Push external schema changes into editor when not focused
   useEffect(() => {
     if (!isFocused.current) {
-      setText(JSON.stringify(schema, null, 2))
+      setText(schemaToDSL(schema))
       setError(null)
     }
   }, [schema])
@@ -29,13 +64,9 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       try {
-        const parsed = JSON.parse(value) as Schema
-        if (parsed && Array.isArray(parsed.tables)) {
-          setError(null)
-          onSchemaChange(parsed)
-        } else {
-          setError('"tables" array required')
-        }
+        const parsed = dslToSchema(value, schemaRef.current)
+        setError(null)
+        onSchemaChange(parsed)
       } catch (e) {
         setError((e as Error).message)
       }
@@ -45,10 +76,9 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
   const handleBlur = useCallback((e: React.FocusEvent) => {
     if (!containerRef.current?.contains(e.relatedTarget as Node)) {
       isFocused.current = false
-      // Re-format to canonical JSON on blur (if valid)
-      if (!error) setText(JSON.stringify(schema, null, 2))
+      if (!error) setText(schemaToDSL(schemaRef.current))
     }
-  }, [error, schema])
+  }, [error])
 
   return (
     <div
@@ -59,23 +89,19 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
     >
       {/* Header */}
       <div style={{
-        padding: '10px 16px',
+        padding: '10px 16px', flexShrink: 0,
         borderBottom: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: 10,
       }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Schema JSON
+          Schema
         </span>
-        {error ? (
-          <span style={{
-            fontSize: 11, color: '#ef4444', fontFamily: 'monospace',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-          }}>
-            ⚠ {error}
-          </span>
-        ) : (
-          <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 700 }}>✓ valid</span>
-        )}
+        <span style={{ fontSize: 10, color: '#374151', fontFamily: 'monospace' }}>
+          Table Name {'{'} col type [pk|unique|null|{'>'} ref.col] {'}'}
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: error ? '#ef4444' : '#22c55e' }}>
+          {error ? `⚠ ${error}` : '✓'}
+        </span>
       </div>
 
       {/* Editor */}
@@ -83,17 +109,16 @@ export function SchemaEditor({ schema, onSchemaChange }: Props) {
         <CodeMirror
           value={text}
           onChange={handleChange}
-          extensions={[json()]}
+          extensions={[schemaLang]}
           theme={oneDark}
-          style={{ fontSize: 12, minHeight: '100%' }}
+          style={{ fontSize: 13 }}
           basicSetup={{
             lineNumbers: true,
-            foldGutter: true,
+            foldGutter: false,
             bracketMatching: true,
-            closeBrackets: true,
+            closeBrackets: false,
             autocompletion: false,
             highlightActiveLine: true,
-            highlightSelectionMatches: true,
           }}
         />
       </div>
