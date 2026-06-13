@@ -7,6 +7,7 @@ import {
   SelectionMode,
   useNodesState,
   useEdgesState,
+  useNodesInitialized,
   type Node,
   type Edge,
   type OnSelectionChangeParams,
@@ -43,6 +44,14 @@ import { upsertSave } from './services/schemasAPI'
 const NODE_TYPES = { table: TableNode }
 const EDGE_TYPES = { fk: OrthoEdge }
 const TAB_H = 58
+
+function NodesInitializedFitView({ rfRef }: { rfRef: React.RefObject<ReactFlowInstance<any, any> | null> }) {
+  const initialized = useNodesInitialized()
+  useEffect(() => {
+    if (initialized) rfRef.current?.fitView({ padding: 0.2, duration: 300 })
+  }, [initialized, rfRef])
+  return null
+}
 
 function getRelType(table: Table, col: Column): '1:1' | '1:N' | 'N:M' {
   if (col.unique) return '1:1'
@@ -477,16 +486,25 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       }
     }
 
-    if (currentSaveId) {
-      const existingName = currentSaveName.current ?? 'schema'
-      await upsertSave(existingName, schema, posMap, currentSaveId)
-    } else if (!fileHandle) {
-      const defaultName = schema.tables.map(tb => tb.name).slice(0, 2).join(', ') + (schema.tables.length > 2 ? '…' : '')
-      const name = await dialog.prompt(lang === 'ru' ? 'Название сохранения' : 'Save name', t.saveNamePrompt, defaultName)
-      if (!name) return
-      const saved = await upsertSave(name, schema, posMap)
-      setCurrentSaveId(saved.id)
-      currentSaveName.current = name
+    try {
+      if (currentSaveId && currentSaveName.current) {
+        await upsertSave(currentSaveName.current, schema, posMap, currentSaveId)
+      } else {
+        // use filename (without extension) as default name when opening a file
+        const fileDefault = fileHandle?.name.replace(/\.[^.]+$/, '')
+        const defaultName = fileDefault ?? schema.tables.map(tb => tb.name).slice(0, 2).join(', ') + (schema.tables.length > 2 ? '…' : '')
+        const name = await dialog.prompt(lang === 'ru' ? 'Название сохранения' : 'Save name', t.saveNamePrompt, defaultName)
+        if (!name) return
+        const saved = await upsertSave(name, schema, posMap)
+        setCurrentSaveId(saved.id)
+        currentSaveName.current = name
+      }
+    } catch (e) {
+      dialog.alert(
+        lang === 'ru' ? 'Ошибка сохранения' : 'Save failed',
+        (e as Error).message
+      )
+      return
     }
 
     setSaveFlash(true)
@@ -681,7 +699,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
               <ViewModeCtx.Provider value={{ mode: viewMode, bulkExpand, bulkKey }}>
                 <HighlightCtx.Provider value={highlightCtxValue}>
                   <MultiSelectCtx.Provider value={multiSelectActive}>
-                    <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}>
+                    <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}><NodesInitializedFitView rfRef={rfInstanceRef} />
                       <Background color="#1a1d27" gap={20} />
                       <Controls showInteractive={false} className="!bg-[#1a1d27] !border-white/10 !rounded-xl !overflow-hidden !shadow-2xl" />
                       <MiniMap style={{ background: '#13151f', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }} nodeColor={n => tagColor((n.data as { table?: { tags?: string[] } }).table?.tags)} maskColor="rgba(0,0,0,0.6)" />
