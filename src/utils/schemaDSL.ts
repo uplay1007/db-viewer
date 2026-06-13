@@ -27,8 +27,12 @@ export function dslToSchema(text: string, prevSchema?: Schema): Schema {
   const tableRe = /Table\s+(\w+)\s*\{([^}]*)\}/gi
   let m: RegExpExecArray | null
 
+  const seenNames = new Set<string>()
+
   while ((m = tableRe.exec(text)) !== null) {
     const name = m[1]
+    if (seenNames.has(name)) throw new Error(`Duplicate table: ${name}`)
+    seenNames.add(name)
     const body = m[2]
     const columns: Column[] = []
 
