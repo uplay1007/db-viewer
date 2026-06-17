@@ -1,0 +1,243 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+  background: #1a1d27;
+  width: 420px;
+  max-height: 520px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backBtn {
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  margin-right: 4px;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.headerTitle {
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.headerTableName {
+  /* color set via inline var(--accent) */
+  color: var(--table-color, #6366f1);
+}
+
+.headerSub {
+  color: #6b7280;
+  margin-left: 4px;
+}
+
+.closeBtn {
+  color: #6b7280;
+  font-size: 22px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.clearBtn {
+  width: 100%;
+  padding: 10px 20px;
+  text-align: left;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #f87171;
+  transition: background 0.15s;
+}
+
+.clearBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.clearBtnIcon {
+  font-size: 13px;
+}
+
+.clearBtnCurrent {
+  margin-left: auto;
+  font-family: monospace;
+  font-size: 12px;
+  opacity: 0.4;
+}
+
+.divider {
+  height: 1px;
+  margin: 4px 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tableBtn {
+  width: 100%;
+  padding: 12px 20px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tableBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tableBtnName {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  /* color set via inline CSS var */
+  color: var(--table-color, #9ca3af);
+}
+
+.tableBtnRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 55%;
+}
+
+.tag {
+  font-size: 10px;
+  font-family: monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9ca3af;
+}
+
+.tableArrow {
+  color: #4b5563;
+  font-size: 14px;
+  margin-left: 4px;
+  transition: color 0.15s;
+}
+
+.tableBtn:hover .tableArrow {
+  color: #9ca3af;
+}
+
+.colBtn {
+  width: 100%;
+  padding: 12px 20px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.colBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.colBtnLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* border-color and background set via inline CSS var */
+  border-color: var(--radio-border, rgba(255, 255, 255, 0.2));
+  background: var(--radio-bg, transparent);
+}
+
+.radioDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: white;
+  display: block;
+}
+
+.colName {
+  font-family: monospace;
+  font-size: 14px;
+  color: white;
+}
+
+.colType {
+  font-size: 12px;
+  font-family: monospace;
+  color: #6b7280;
+}

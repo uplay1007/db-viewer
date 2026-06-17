@@ -2,11 +2,10 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import type { Schema } from '../types/schema'
 import { tableColor } from '../utils/colors'
 import { T, type Lang } from '../i18n'
+import styles from './DataViewer.module.css'
 
 const FONT_SIZES = [13, 14, 15, 16, 18, 20]
 const DEFAULT_SIZE_IDX = 2
-
-interface CellKey { row: number; col: string }
 
 interface Props {
   schema: Schema
@@ -15,11 +14,10 @@ interface Props {
 }
 
 function EditableCell({
-  value, fontSize, rowH,
+  value, rowH,
   onCommit,
 }: {
   value: unknown
-  fontSize: number
   rowH: number
   onCommit: (v: string) => void
 }) {
@@ -41,13 +39,11 @@ function EditableCell({
         value={draft}
         onChange={e => setDraft(e.target.value)}
         onBlur={commit}
-        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(String(value ?? '')); setEditing(false) } }}
-        style={{
-          width: '100%', background: '#0f1117', color: 'white',
-          border: '1px solid #6366f1', borderRadius: 6,
-          padding: `2px 8px`, fontSize, fontFamily: 'monospace',
-          outline: 'none',
+        onKeyDown={e => {
+          if (e.key === 'Enter') commit()
+          if (e.key === 'Escape') { setDraft(String(value ?? '')); setEditing(false) }
         }}
+        className={styles.cellInput}
       />
     )
   }
@@ -56,14 +52,12 @@ function EditableCell({
     <span
       onDoubleClick={() => { setDraft(display === 'null' ? '' : display); setEditing(true) }}
       title="Двойной клик для редактирования"
+      className={styles.cellDisplay}
       style={{
-        display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        maxWidth: 280, cursor: 'text', borderRadius: 4, padding: '1px 4px',
-        color: isNull ? '#374151' : '#d1d5db',
-        fontStyle: isNull ? 'italic' : 'normal',
-        fontSize, fontFamily: 'monospace',
-        lineHeight: `${rowH * 0.7}px`,
-      }}
+        '--cell-color': isNull ? '#374151' : '#d1d5db',
+        '--cell-style': isNull ? 'italic' : 'normal',
+        '--cell-lh': `${rowH * 0.7}px`,
+      } as React.CSSProperties}
     >
       {display}
     </span>
@@ -77,10 +71,9 @@ export function DataViewer({ schema, lang, onDataChange }: Props) {
   const [sizeIdx, setSizeIdx] = useState(DEFAULT_SIZE_IDX)
 
   useEffect(() => {
-    if (!tableNames.includes(selectedTable)) {
-      setSelectedTable(tableNames[0] ?? '')
-    }
+    if (!tableNames.includes(selectedTable)) setSelectedTable(tableNames[0] ?? '')
   }, [tableNames, selectedTable])
+
   const fontSize = FONT_SIZES[sizeIdx]
   const rowH = Math.round(fontSize * 2.8)
 
@@ -94,7 +87,6 @@ export function DataViewer({ schema, lang, onDataChange }: Props) {
   const updateCell = (rowIdx: number, colName: string, rawVal: string) => {
     const col = columns.find(c => c.name === colName)
     const isNumericType = col && /int|float|decimal|numeric|real|double|serial/i.test(col.type)
-
     const updated = rows.map((r, i) => {
       if (i !== rowIdx) return r
       let val: unknown
@@ -122,33 +114,34 @@ export function DataViewer({ schema, lang, onDataChange }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: '#0f1117', fontSize }}>
-
+    <div
+      className={styles.root}
+      style={{ '--fs': `${fontSize}px`, '--accent': accent } as React.CSSProperties}
+    >
       {/* Left: table list */}
-      <div style={{ width: 220, background: '#13151f', borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '12px 16px 8px', fontSize: fontSize - 2, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          {t.dataTab}
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div className={styles.tableList}>
+        <div className={styles.tableListHeader}>{t.dataTab}</div>
+        <div className={styles.tableListBody}>
           {schema.tables.map(tbl => {
             const rowCount = schema.data?.[tbl.name]?.length ?? 0
             const color = tableColor(tbl.name)
             const active = tbl.name === selectedTable
             return (
-              <button key={tbl.name} onClick={() => setSelectedTable(tbl.name)}
+              <button
+                key={tbl.name}
+                onClick={() => setSelectedTable(tbl.name)}
+                className={styles.tableItem}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: `${rowH * 0.3}px 16px`, textAlign: 'left', border: 'none',
-                  background: active ? color + '1a' : 'transparent',
-                  borderLeft: `3px solid ${active ? color : 'transparent'}`,
-                  cursor: 'pointer', transition: 'background .15s',
-                }}
+                  '--item-color': color,
+                  '--item-bg': active ? `${color}1a` : 'transparent',
+                  '--item-border': active ? color : 'transparent',
+                  '--item-weight': active ? 600 : 400,
+                  '--item-name-color': active ? 'white' : '#9ca3af',
+                } as React.CSSProperties}
               >
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize, color: active ? 'white' : '#9ca3af', fontWeight: active ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {tbl.name}
-                </span>
-                <span style={{ fontSize: fontSize - 2, color: '#4b5563' }}>{rowCount}</span>
+                <span className={styles.tableItemDot} />
+                <span className={styles.tableItemName}>{tbl.name}</span>
+                <span className={styles.tableItemCount}>{rowCount}</span>
               </button>
             )
           })}
@@ -156,94 +149,98 @@ export function DataViewer({ schema, lang, onDataChange }: Props) {
       </div>
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-        {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', minHeight: 48, background: accent + '18', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontWeight: 700, color: accent, fontSize: fontSize + 1 }}>{selectedTable}</span>
-            <span style={{ fontSize: fontSize - 2, color: '#6b7280' }}>{t.rowCount(rows.length)}</span>
-            <button
-              onClick={addRow}
-              style={{ fontSize: fontSize - 1, fontWeight: 600, padding: '4px 12px', borderRadius: 8, background: accent + '22', color: accent, border: `1px solid ${accent}44`, cursor: 'pointer' }}
-            >
+      <div className={styles.main}>
+        <div
+          className={styles.toolbar}
+          style={{
+            '--toolbar-bg': `${accent}18`,
+            '--accent-btn-bg': `${accent}22`,
+            '--accent-btn-border': `${accent}44`,
+          } as React.CSSProperties}
+        >
+          <div className={styles.toolbarLeft}>
+            <span className={styles.toolbarTableName}>{selectedTable}</span>
+            <span className={styles.toolbarRowCount}>{t.rowCount(rows.length)}</span>
+            <button onClick={addRow} className={styles.addRowBtn}>
               + {lang === 'ru' ? 'Добавить строку' : 'Add row'}
             </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: fontSize - 3, color: '#4b5563' }}>Aa</span>
-            <input type="range" min={0} max={FONT_SIZES.length - 1} value={sizeIdx}
+          <div className={styles.toolbarRight}>
+            <span className={styles.fontSmall}>Aa</span>
+            <input
+              type="range"
+              min={0}
+              max={FONT_SIZES.length - 1}
+              value={sizeIdx}
               onChange={e => setSizeIdx(Number(e.target.value))}
-              style={{ width: 80, accentColor: '#6366f1', cursor: 'pointer' }} />
-            <span style={{ fontSize: fontSize - 2, color: '#4b5563', minWidth: 32 }}>{fontSize}px</span>
+              className={styles.fontSizeSlider}
+            />
+            <span className={styles.fontSizeLabel}>{fontSize}px</span>
           </div>
         </div>
 
         {rows.length === 0 && allCols.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16 }}>
-            <span style={{ color: '#4b5563', fontSize }}>{t.noData}</span>
-            <button onClick={addRow} style={{ fontSize, fontWeight: 600, padding: '8px 20px', borderRadius: 10, background: '#6366f1', color: 'white', border: 'none', cursor: 'pointer' }}>
+          <div className={styles.emptyState}>
+            <span className={styles.emptyText}>{t.noData}</span>
+            <button onClick={addRow} className={styles.emptyAddBtn}>
               + {lang === 'ru' ? 'Добавить первую строку' : 'Add first row'}
             </button>
           </div>
         ) : (
-          <div style={{ flex: 1, overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize, minWidth: 'max-content' }}>
-              <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#181b26' }}>
+          <div className={styles.tableScroll}>
+            <table className={styles.dataTable}>
+              <thead className={styles.thead}>
                 <tr>
-                  <th style={{ padding: `10px 14px`, color: '#374151', fontWeight: 400, fontSize: fontSize - 2, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'right', width: 44 }}>#</th>
+                  <th className={styles.thIndex}>#</th>
                   {columns.map(col => (
-                    <th key={col.name} style={{ padding: `10px 16px`, textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: accent }}>{col.name}</span>
-                        <span style={{ fontSize: fontSize - 3, color: '#4b5563', fontWeight: 400, textTransform: 'uppercase' }}>{col.type}</span>
-                        {col.primaryKey && <span style={{ fontSize: fontSize - 4, padding: '1px 5px', borderRadius: 4, background: accent + '2a', color: accent, fontWeight: 700 }}>PK</span>}
+                    <th key={col.name} className={styles.th}>
+                      <div className={styles.thColHeader}>
+                        <span className={styles.thColName}>{col.name}</span>
+                        <span className={styles.thColType}>{col.type}</span>
+                        {col.primaryKey && (
+                          <span
+                            className={styles.thColPk}
+                            style={{ '--accent-badge-bg': `${accent}2a` } as React.CSSProperties}
+                          >
+                            PK
+                          </span>
+                        )}
                       </div>
                     </th>
                   ))}
                   {extraCols.map(k => (
-                    <th key={k} style={{ padding: `10px 16px`, textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>{k}</th>
+                    <th key={k} className={styles.thExtra}>{k}</th>
                   ))}
-                  <th style={{ padding: `10px 8px`, width: 36, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
+                  <th className={styles.thActions} />
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row, i) => (
-                  <tr key={i} className="group" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: `${rowH * 0.2}px 14px`, color: '#374151', fontSize: fontSize - 2, textAlign: 'right', fontFamily: 'monospace', userSelect: 'none' }}>{i + 1}</td>
+                  <tr key={i} className={styles.row}>
+                    <td className={styles.tdIndex}>{i + 1}</td>
                     {allCols.map(colName => (
-                      <td key={colName} style={{ padding: `${rowH * 0.15}px 16px` }}>
+                      <td key={colName} className={styles.td}>
                         <EditableCell
                           value={row[colName]}
-                          fontSize={fontSize}
                           rowH={rowH}
                           onCommit={v => updateCell(i, colName, v)}
                         />
                       </td>
                     ))}
-                    <td style={{ padding: `${rowH * 0.2}px 8px`, textAlign: 'center' }}>
+                    <td className={styles.tdActions}>
                       <button
                         onClick={() => deleteRow(i)}
                         title={lang === 'ru' ? 'Удалить строку' : 'Delete row'}
-                        style={{ fontSize: 14, background: 'none', border: 'none', cursor: 'pointer', color: '#4b5563', opacity: 0, transition: 'opacity .15s', padding: '2px 4px', borderRadius: 4 }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0'; (e.currentTarget as HTMLElement).style.color = '#4b5563' }}
+                        className={styles.deleteBtn}
                       >
                         ✕
                       </button>
                     </td>
                   </tr>
                 ))}
-                {/* Add row inline */}
                 <tr>
-                  <td colSpan={allCols.length + 2} style={{ padding: '8px 16px' }}>
-                    <button onClick={addRow} style={{ fontSize: fontSize - 1, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'none', padding: 0 }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#6366f1')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}
-                    >
+                  <td colSpan={allCols.length + 2} className={styles.addRowInlineWrap}>
+                    <button onClick={addRow} className={styles.addRowInlineBtn}>
                       + {lang === 'ru' ? 'Добавить строку' : 'Add row'}
                     </button>
                   </td>

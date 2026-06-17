@@ -13,7 +13,6 @@ import {
   type OnSelectionChangeParams,
   type ReactFlowInstance,
   type NodeChange,
-  applyNodeChanges,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -29,7 +28,7 @@ import { ViewModeCtx, type ViewMode, type ViewModeCtxValue } from './contexts/vi
 import { OrthoEdge, type OrthoEdgeData } from './components/OrthoEdge'
 import { computeELKLayout } from './services/layoutService'
 import { TableEditor } from './components/TableEditor'
-import { Sidebar, SIDEBAR_W } from './components/Sidebar'
+import { Sidebar } from './components/Sidebar'
 import { SchemaEditor } from './components/SchemaEditor'
 import { DataViewer } from './components/DataViewer'
 import { UploadZone, type OpenResult } from './components/UploadZone'
@@ -40,10 +39,10 @@ import { DialogProvider, useDialog } from './contexts/DialogContext'
 import { useAuth } from './contexts/AuthContext'
 import { AuthScreen } from './components/AuthScreen'
 import { upsertSave } from './services/schemasAPI'
+import appStyles from './App.module.css'
 
 const NODE_TYPES = { table: TableNode }
 const EDGE_TYPES = { fk: OrthoEdge }
-const TAB_H = 58
 
 function NodesInitializedFitView({ rfRef }: { rfRef: React.RefObject<ReactFlowInstance<any, any> | null> }) {
   const initialized = useNodesInitialized()
@@ -125,9 +124,7 @@ function exportJSON(schema: Schema) {
   const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = 'schema.json'
-  a.click()
+  a.href = url; a.download = 'schema.json'; a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -136,9 +133,7 @@ function downloadSQL(schema: Schema) {
   const blob = new Blob([sql], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = 'schema.sql'
-  a.click()
+  a.href = url; a.download = 'schema.sql'; a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -147,8 +142,8 @@ export default function App() {
   const { user, loading } = useAuth()
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0f1117', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ color: '#4b5563', fontSize: 14 }}>Loading...</span>
+    <div className={appStyles.loadingScreen}>
+      <span className={appStyles.loadingText}>Loading...</span>
     </div>
   )
 
@@ -169,13 +164,12 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const [currentSaveId, setCurrentSaveId] = useState<string | undefined>(session?.saveId)
   const currentSaveName = useRef<string | null>(null)
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
-  
+
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const nodesRef = useRef<Node[]>([])
   useEffect(() => { nodesRef.current = nodes }, [nodes])
-  
-  // MASTER POSITIONS: The source of truth for "All Groups" view
+
   const masterPositionsRef = useRef<Record<string, { x: number; y: number }>>(session?.positions ?? {})
 
   const [editorState, setEditorState] = useState<EditorState>(null)
@@ -223,21 +217,19 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, []) // editorWidth captured via dragStartWidthRef at drag start — no dep needed
+  }, [])
 
   const [multiSelectActive, setMultiSelectActive] = useState(false)
   const [highlightTable, setHighlightTable] = useState<string | null>(null)
   const [layouting, setLayouting] = useState(false)
   const [pendingELK, setPendingELK] = useState(false)
 
-  // Filter nodes/edges by active tag
   const displayNodes = useMemo(() => {
     if (!tagFilter || !schema) {
-      // In All Groups mode, strictly use masterPositionsRef
-      return nodes.map(n => ({ 
-        ...n, 
+      return nodes.map(n => ({
+        ...n,
         hidden: false,
-        position: masterPositionsRef.current[n.id] ?? n.position 
+        position: masterPositionsRef.current[n.id] ?? n.position
       }))
     }
     const visible = new Set(schema.tables.filter(t => t.tags?.includes(tagFilter)).map(t => t.name))
@@ -272,13 +264,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     return () => document.removeEventListener('mousedown', handler)
   }, [groupsOpen])
 
-  // CRITICAL: Hybrid layout logic
   useEffect(() => {
     if (!schema) return
     setHighlightTable(null)
 
     if (!tagFilter) {
-      // MODE A: All Groups -> Restore master positions
       if (Object.keys(masterPositionsRef.current).length > 0) {
         setNodes(prev => prev.map(n => ({
           ...n,
@@ -289,7 +279,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       return
     }
 
-    // MODE B: Specific Group -> Run ELK for compactness
     const visibleNames = new Set(schema.tables.filter(t => t.tags?.includes(tagFilter)).map(t => t.name))
     if (visibleNames.size === 0) return
 
@@ -334,16 +323,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         if (h) heights[n.id] = h
       })
       const { positions } = await computeELKLayout(schema, heights)
-
-      // If we are in "All Groups" mode, update master positions
-      if (!tagFilter) {
-        masterPositionsRef.current = { ...positions }
-      }
-
-      setNodes(prev => prev.map(n => ({
-        ...n,
-        position: positions[n.id] ?? n.position,
-      })))
+      if (!tagFilter) masterPositionsRef.current = { ...positions }
+      setNodes(prev => prev.map(n => ({ ...n, position: positions[n.id] ?? n.position })))
     } catch (err) {
       console.error('ELK layout failed:', err)
     } finally {
@@ -363,10 +344,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     handleLayout()
   }, [pendingELK, nodes, layouting, handleLayout, tagFilter, schema])
 
-  // Custom onNodesChange to track manual dragging into Master Positions
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
     onNodesChange(changes)
-
     if (!tagFilter) {
       changes.forEach(c => {
         if (c.type === 'position' && c.position) {
@@ -390,10 +369,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const handleNodeDrag = useCallback((_e: MouseEvent | TouchEvent, node: Node) => {
     const isMasterMode = !tagFilter
     const isHighlighted = highlightCtxValue.highlighted.has(node.id)
-    
-    if (isMasterMode) {
-      masterPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y }
-    }
+
+    if (isMasterMode) masterPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y }
 
     if (!isHighlighted) return
     const origin = groupDragOrigins.current[node.id]
@@ -420,11 +397,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     initialSavedPos?: Record<string, { x: number; y: number }>
   ) => {
     const schemaToUse = { ...s, tables: s.tables.map(t => t.tags !== undefined ? t : { ...t, tags: [] }) }
-
-    if (initialSavedPos) {
-      masterPositionsRef.current = { ...initialSavedPos }
-    }
-
+    if (initialSavedPos) masterPositionsRef.current = { ...initialSavedPos }
     setSchema(schemaToUse)
     saveCurrentSession({ schema: schemaToUse, positions: masterPositionsRef.current })
     const { nodes: n, edges: e } = schemaToFlow(schemaToUse, handleEdit, masterPositionsRef.current, currentNodes)
@@ -440,9 +413,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     if (session) {
       applySchema(session.schema, undefined, session.positions)
       const hasPositions = session.positions && Object.keys(session.positions).length > 0
-      if (!hasPositions) {
-        setTimeout(() => setPendingELK(true), 250)
-      }
+      if (!hasPositions) setTimeout(() => setPendingELK(true), 250)
     }
   }, [session, applySchema])
 
@@ -462,7 +433,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       const isSql  = fileHandle.name.endsWith('.sql')
       const isJson = fileHandle.name.endsWith('.json')
       if (!isSql && !isJson) {
-        // source format (Prisma/TypeORM/Django/SQLAlchemy) — can't round-trip, download JSON copy
         exportJSON(schema)
         dialog.alert(
           lang === 'ru' ? 'Формат файла' : 'File format',
@@ -490,7 +460,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       if (currentSaveId && currentSaveName.current) {
         await upsertSave(currentSaveName.current, schema, posMap, currentSaveId)
       } else {
-        // use filename (without extension) as default name when opening a file
         const fileDefault = fileHandle?.name.replace(/\.[^.]+$/, '')
         const defaultName = fileDefault ?? schema.tables.map(tb => tb.name).slice(0, 2).join(', ') + (schema.tables.length > 2 ? '…' : '')
         const name = await dialog.prompt(lang === 'ru' ? 'Название сохранения' : 'Save name', t.saveNamePrompt, defaultName)
@@ -521,7 +490,10 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     return () => window.removeEventListener('keydown', onKey)
   }, [handleSave])
 
-  const handleExit = useCallback(() => { clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined); setFileHandle(null); setTagFilter(null); setEditorState(null) }, [])
+  const handleExit = useCallback(() => {
+    clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined)
+    setFileHandle(null); setTagFilter(null); setEditorState(null)
+  }, [])
 
   const handleEditorSave = useCallback((updated: Table, originalName: string | null) => {
     if (!schema) return
@@ -568,17 +540,14 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   }, [schema, applySchema, t, highlightTable, dialog, lang])
 
   const handleOpen = useCallback((result: OpenResult) => {
-    setHighlightTable(null)
-    setTagFilter(null)
+    setHighlightTable(null); setTagFilter(null)
     setCurrentSaveId(result.savedId)
     currentSaveName.current = result.savedName ?? null
     setFileHandle(result.fileHandle ?? null)
     applySchema(result.schema, undefined, result.positions)
     setActiveTab('schema')
     const hasPositions = result.positions && Object.keys(result.positions).length > 0
-    if (!hasPositions) {
-      setTimeout(() => setPendingELK(true), 250)
-    }
+    if (!hasPositions) setTimeout(() => setPendingELK(true), 250)
   }, [applySchema])
 
   if (!schema) {
@@ -586,49 +555,65 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ height: TAB_H, background: '#13151f', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', padding: '0 20px', gap: 32, flexShrink: 0 }}>
-        <div className="flex items-center gap-3 mr-4">
-          <span className="text-white font-black text-xl tracking-tighter">DB Viewer</span>
-          <div className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-gray-500 font-bold uppercase tracking-widest">{schema.tables.length} tables</div>
+    <div className={appStyles.root}>
+      {/* Top bar */}
+      <div className={appStyles.topbar}>
+        <div className={appStyles.topbarBrand}>
+          <span className={appStyles.topbarLogo}>DB Viewer</span>
+          <div className={appStyles.topbarBadge}>{schema.tables.length} tables</div>
         </div>
-        <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/5">
+        <div className={appStyles.tabRow}>
           {(['schema', 'data'] as Tab[]).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' : 'text-gray-500 hover:text-gray-300'}`}>
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`${appStyles.tabBtn} ${activeTab === tab ? appStyles.tabBtnActive : ''}`}
+            >
               {tab === 'schema' ? t.schemaTab : t.dataTab}
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2 pr-5">
-          <button onClick={() => { exportJSON(schema); dialog.alert(lang === 'ru' ? 'Экспорт JSON' : 'JSON Export', lang === 'ru' ? 'Файл схемы успешно скачан.' : 'The schema file has been successfully downloaded.') }} className="rounded-lg transition-colors hover:bg-white/10" style={{ fontSize: 14, color: '#6b7280', padding: '7px 14px', border: '1px solid rgba(255,255,255,0.1)' }}>↓ JSON</button>
-          <button onClick={() => { downloadSQL(schema); dialog.alert(lang === 'ru' ? 'Экспорт SQL' : 'SQL Export', lang === 'ru' ? 'SQL DDL файл успешно скачан.' : 'The SQL DDL file has been successfully downloaded.') }} className="rounded-lg transition-colors hover:bg-white/10" style={{ fontSize: 14, color: '#6b7280', padding: '7px 14px', border: '1px solid rgba(255,255,255,0.1)' }}>↓ SQL</button>
-          <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
-          <button onClick={handleSave} className="rounded-lg font-semibold text-white transition-all hover:brightness-110" style={{ fontSize: 15, padding: '7px 18px', background: saveFlash ? '#16a34a' : '#6366f1', minWidth: 90 }}>{t.saveBtn}</button>
-          <button onClick={handleExit} className="text-gray-500 hover:text-white transition-colors ml-2" style={{ fontSize: 14 }}>{t.exitBtn}</button>
-          <button onClick={() => setLang(l => l === 'en' ? 'ru' : 'en')} className="ml-4 px-2 py-1 rounded border border-white/10 text-[10px] font-bold text-gray-500 hover:text-white transition-colors">{lang === 'en' ? 'RU' : 'EN'}</button>
+        <div className={appStyles.topbarRight}>
+          <button
+            onClick={() => { exportJSON(schema); dialog.alert(lang === 'ru' ? 'Экспорт JSON' : 'JSON Export', lang === 'ru' ? 'Файл схемы успешно скачан.' : 'The schema file has been successfully downloaded.') }}
+            className={appStyles.exportBtn}
+          >
+            ↓ JSON
+          </button>
+          <button
+            onClick={() => { downloadSQL(schema); dialog.alert(lang === 'ru' ? 'Экспорт SQL' : 'SQL Export', lang === 'ru' ? 'SQL DDL файл успешно скачан.' : 'The SQL DDL file has been successfully downloaded.') }}
+            className={appStyles.exportBtn}
+          >
+            ↓ SQL
+          </button>
+          <div className={appStyles.divider} />
+          <button
+            onClick={handleSave}
+            className={appStyles.saveBtn}
+            style={{ '--save-bg': saveFlash ? '#16a34a' : '#6366f1' } as React.CSSProperties}
+          >
+            {t.saveBtn}
+          </button>
+          <button onClick={handleExit} className={appStyles.exitBtn}>{t.exitBtn}</button>
+          <button
+            onClick={() => setLang(l => l === 'en' ? 'ru' : 'en')}
+            className={appStyles.langToggleBtn}
+          >
+            {lang === 'en' ? 'RU' : 'EN'}
+          </button>
         </div>
       </div>
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+
+      {/* Content */}
+      <div className={appStyles.content}>
         {activeTab === 'schema' ? (
-          <div style={{ width: '100%', height: '100%', display: 'flex', position: 'relative' }}>
+          <div className={appStyles.schemaView}>
             {splitView ? (
               <>
-                <div style={{ width: editorWidth, height: '100%', flexShrink: 0, overflow: 'hidden' }}>
+                <div className={appStyles.splitEditorPane} style={{ width: editorWidth }}>
                   <SchemaEditor schema={schema} onSchemaChange={handleSchemaFromEditor} width={editorWidth} />
                 </div>
-                {/* Resize handle */}
-                <div
-                  onMouseDown={handleResizeStart}
-                  style={{
-                    width: 5, height: '100%', flexShrink: 0, cursor: 'col-resize',
-                    background: 'rgba(255,255,255,0.04)',
-                    borderLeft: '1px solid rgba(255,255,255,0.08)',
-                    borderRight: '1px solid rgba(255,255,255,0.08)',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.3)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-                />
+                <div className={appStyles.resizeHandle} onMouseDown={handleResizeStart} />
               </>
             ) : (
               <Sidebar
@@ -641,68 +626,135 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                 onExit={handleExit}
               />
             )}
-            <div style={{ flex: 1, height: '100%', background: '#0f1117', position: 'relative' }}>
-              <div className="absolute top-6 left-6 z-10 flex items-center gap-3">
-                <div className="flex bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl">
+            <div className={appStyles.canvasArea}>
+              {/* Canvas toolbar */}
+              <div className={appStyles.canvasToolbar}>
+                {/* Pan / Select */}
+                <div className={appStyles.toolPill}>
                   {(['pan', 'select'] as const).map(mode => (
-                    <button key={mode} onClick={() => setCanvasMode(mode)} className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${canvasMode === mode ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} title={mode === 'pan' ? (lang === 'ru' ? 'Режим перемещения' : 'Pan mode') : (lang === 'ru' ? 'Режим выделения (лассо)' : 'Select mode (lasso)')}>
-                      <span style={{ fontSize: 15 }}>{mode === 'pan' ? '✋' : '⬚'}</span>
-                      <span className="text-xs font-bold uppercase tracking-wider">{mode}</span>
+                    <button
+                      key={mode}
+                      onClick={() => setCanvasMode(mode)}
+                      className={`${appStyles.toolBtn} ${canvasMode === mode ? appStyles.toolBtnActive : ''}`}
+                      title={mode === 'pan' ? (lang === 'ru' ? 'Режим перемещения' : 'Pan mode') : (lang === 'ru' ? 'Режим выделения (лассо)' : 'Select mode (lasso)')}
+                    >
+                      <span className={appStyles.toolBtnIcon}>{mode === 'pan' ? '✋' : '⬚'}</span>
+                      <span className={appStyles.toolBtnLabel}>{mode}</span>
                     </button>
                   ))}
                 </div>
-                <div className="relative bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl" ref={groupsBtnRef}>
-                  <button onClick={() => setGroupsOpen(!groupsOpen)} className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${tagFilter ? 'text-indigo-400' : 'text-gray-400 hover:text-white'}`}>
-                    <span style={{ fontSize: 15 }}>◎</span>
-                    <span className="text-xs font-bold uppercase tracking-wider">{tagFilter ? `#${tagFilter}` : (lang === 'ru' ? 'Группы' : 'Groups')}</span>
-                    <span style={{ fontSize: 10, opacity: 0.5 }}>▼</span>
+
+                {/* Groups */}
+                <div className={appStyles.groupsPill} ref={groupsBtnRef}>
+                  <button
+                    onClick={() => setGroupsOpen(!groupsOpen)}
+                    className={`${appStyles.groupsBtn} ${tagFilter ? appStyles.groupsBtnFiltered : ''}`}
+                  >
+                    <span className={appStyles.toolBtnIcon}>◎</span>
+                    <span className={appStyles.toolBtnLabel}>
+                      {tagFilter ? `#${tagFilter}` : (lang === 'ru' ? 'Группы' : 'Groups')}
+                    </span>
+                    <span className={appStyles.groupsChevron}>▼</span>
                   </button>
                   {groupsOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-[#1a1d27] border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-2 z-50">
-                      <button onClick={() => { setTagFilter(null); setGroupsOpen(false) }} className={`w-full px-5 py-2.5 text-left text-sm flex items-center justify-between hover:bg-white/5 transition-colors ${tagFilter === null ? 'text-indigo-400 font-bold bg-indigo-500/5' : 'text-gray-400'}`}>
+                    <div className={appStyles.groupsDropdown}>
+                      <button
+                        onClick={() => { setTagFilter(null); setGroupsOpen(false) }}
+                        className={`${appStyles.groupsAllBtn} ${tagFilter === null ? appStyles.groupsAllBtnActive : ''}`}
+                      >
                         <span>{lang === 'ru' ? 'Все таблицы' : 'All groups'}</span>
                         {tagFilter === null && <span>✓</span>}
                       </button>
-                      <div className="h-px bg-white/5 my-1" />
+                      <div className={appStyles.groupsDivider} />
                       {allTags.map(({ tag, count }) => (
-                        <button key={tag} onClick={() => { setTagFilter(tag); setGroupsOpen(false) }} className={`w-full px-5 py-2.5 text-left text-sm flex items-center justify-between hover:bg-white/5 transition-colors ${tagFilter === tag ? 'text-indigo-400 font-bold bg-indigo-500/5' : 'text-gray-400'}`}>
-                          <div className="flex items-center gap-3">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                        <button
+                          key={tag}
+                          onClick={() => { setTagFilter(tag); setGroupsOpen(false) }}
+                          className={`${appStyles.groupsTagBtn} ${tagFilter === tag ? appStyles.groupsTagBtnActive : ''}`}
+                        >
+                          <div className={appStyles.groupsTagLeft}>
+                            <span className={appStyles.groupsTagDot} />
                             <span>{tag}</span>
                           </div>
-                          <span className="text-[10px] opacity-40 font-mono bg-white/5 px-1.5 py-0.5 rounded">{count}</span>
+                          <span className={appStyles.groupsTagCount}>{count}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-                <div className="flex bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl">
-                  <select value={viewMode} onChange={e => handleViewMode(e.target.value as ViewMode)} className="px-4 py-2 rounded-lg bg-transparent text-gray-400 hover:text-white text-xs font-bold outline-none cursor-pointer transition-colors uppercase tracking-wider">
+
+                {/* View mode */}
+                <div className={appStyles.toolPill}>
+                  <select
+                    value={viewMode}
+                    onChange={e => handleViewMode(e.target.value as ViewMode)}
+                    className={appStyles.viewSelect}
+                  >
                     <option value="full">Full</option>
                     <option value="compact">Compact</option>
                     <option value="collapsed">Collapsed</option>
                   </select>
                 </div>
-                <div className="flex bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl">
-                  <button onClick={handleLayout} disabled={layouting} className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${layouting ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`} title="Re-run auto layout">
-                    <span style={{ fontSize: 15, display: 'inline-block', transform: layouting ? 'rotate(90deg)' : undefined }}>⟳</span>
-                    <span className="text-xs font-bold uppercase tracking-wider">{layouting ? '...' : 'Layout'}</span>
+
+                {/* Layout */}
+                <div className={appStyles.toolPill}>
+                  <button
+                    onClick={handleLayout}
+                    disabled={layouting}
+                    className={`${appStyles.toolBtn} ${layouting ? appStyles.toolBtnDisabled : ''}`}
+                    title="Re-run auto layout"
+                  >
+                    <span className={appStyles.toolBtnIcon} style={layouting ? { display: 'inline-block', transform: 'rotate(90deg)' } : undefined}>⟳</span>
+                    <span className={appStyles.toolBtnLabel}>{layouting ? '...' : 'Layout'}</span>
                   </button>
                 </div>
-                <div className="flex bg-[#1a1d27]/90 backdrop-blur rounded-xl p-1 border border-white/10 shadow-2xl">
-                  <button onClick={() => setSplitView(v => !v)} className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${splitView ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} title="Toggle JSON editor">
+
+                {/* JSON split view */}
+                <div className={appStyles.toolPill}>
+                  <button
+                    onClick={() => setSplitView(v => !v)}
+                    className={`${appStyles.toolBtn} ${splitView ? appStyles.toolBtnActive : ''}`}
+                    title="Toggle JSON editor"
+                  >
                     <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700 }}>{'{}'}</span>
-                    <span className="text-xs font-bold uppercase tracking-wider">JSON</span>
+                    <span className={appStyles.toolBtnLabel}>JSON</span>
                   </button>
                 </div>
               </div>
+
               <ViewModeCtx.Provider value={{ mode: viewMode, bulkExpand, bulkKey }}>
                 <HighlightCtx.Provider value={highlightCtxValue}>
                   <MultiSelectCtx.Provider value={multiSelectActive}>
-                    <ReactFlow nodes={displayNodes} edges={displayEdges} onNodesChange={handleNodesChange} onEdgesChange={onEdgesChange} onNodeDragStart={handleNodeDragStart} onNodeDrag={handleNodeDrag} onSelectionChange={handleSelectionChange} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES} fitView fitViewOptions={{ padding: 0.2 }} minZoom={0.05} selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full} panOnDrag={canvasMode === 'pan'} selectionOnDrag={canvasMode === 'select'} panOnScroll={true} onInit={instance => { rfInstanceRef.current = instance }}><NodesInitializedFitView rfRef={rfInstanceRef} />
+                    <ReactFlow
+                      nodes={displayNodes}
+                      edges={displayEdges}
+                      onNodesChange={handleNodesChange}
+                      onEdgesChange={onEdgesChange}
+                      onNodeDragStart={handleNodeDragStart}
+                      onNodeDrag={handleNodeDrag}
+                      onSelectionChange={handleSelectionChange}
+                      nodeTypes={NODE_TYPES}
+                      edgeTypes={EDGE_TYPES}
+                      fitView
+                      fitViewOptions={{ padding: 0.2 }}
+                      minZoom={0.05}
+                      selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full}
+                      panOnDrag={canvasMode === 'pan'}
+                      selectionOnDrag={canvasMode === 'select'}
+                      panOnScroll={true}
+                      onInit={instance => { rfInstanceRef.current = instance }}
+                    >
+                      <NodesInitializedFitView rfRef={rfInstanceRef} />
                       <Background color="#1a1d27" gap={20} />
-                      <Controls showInteractive={false} className="!bg-[#1a1d27] !border-white/10 !rounded-xl !overflow-hidden !shadow-2xl" />
-                      <MiniMap style={{ background: '#13151f', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }} nodeColor={n => tagColor((n.data as { table?: { tags?: string[] } }).table?.tags)} maskColor="rgba(0,0,0,0.6)" />
+                      <Controls
+                        showInteractive={false}
+                        className={appStyles.reactFlowControls}
+                      />
+                      <MiniMap
+                        style={{ background: '#13151f', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}
+                        nodeColor={n => tagColor((n.data as { table?: { tags?: string[] } }).table?.tags)}
+                        maskColor="rgba(0,0,0,0.6)"
+                      />
                     </ReactFlow>
                   </MultiSelectCtx.Provider>
                 </HighlightCtx.Provider>
@@ -710,9 +762,17 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
             </div>
           </div>
         ) : (
-          <DataViewer schema={schema} lang={lang} onDataChange={(tbl, rows) => { const newData = { ...(schema.data ?? {}), [tbl]: rows }; setSchema({ ...schema, data: newData }) }} />
+          <DataViewer
+            schema={schema}
+            lang={lang}
+            onDataChange={(tbl, rows) => {
+              const newData = { ...(schema.data ?? {}), [tbl]: rows }
+              setSchema({ ...schema, data: newData })
+            }}
+          />
         )}
       </div>
+
       {editorState !== null && (() => {
         const editedTable = editorState === 'new' ? null : schema.tables.find(t => t.name === editorState) ?? null
         return <TableEditor key={editorState} table={editedTable} schema={schema} lang={lang} onSave={handleEditorSave} onClose={() => setEditorState(null)} />

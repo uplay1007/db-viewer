@@ -1,0 +1,364 @@
+.root {
+  min-height: 100vh;
+  background: #0f1117;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top nav ──────────────────────────────────────────────────────── */
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 48px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.navLogo {
+  color: white;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navEmail {
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.signOutBtn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #6b7280;
+  background: transparent;
+  cursor: pointer;
+}
+
+.langBtn {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #9ca3af;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────── */
+
+.body {
+  display: flex;
+  flex: 1;
+  gap: 48px;
+  padding: 48px;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── Left column ──────────────────────────────────────────────────── */
+
+.leftCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.heading {
+  color: white;
+  font-weight: 800;
+  font-size: 32px;
+  margin: 0;
+}
+
+.subheading {
+  color: #6b7280;
+  font-size: 16px;
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+/* ── Parser pills ─────────────────────────────────────────────────── */
+
+.parserList {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.parserBtn {
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: rgba(255, 255, 255, 0.07);
+  color: #9ca3af;
+  transition: background 0.15s, color 0.15s;
+}
+
+.parserBtnActive {
+  background: #6366f1;
+  color: white;
+}
+
+/* ── Drop zone ────────────────────────────────────────────────────── */
+
+.dropZone {
+  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 52px 40px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.2s;
+}
+
+.dropZoneDragging {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.07);
+}
+
+.dropZoneHiddenInput {
+  display: none;
+}
+
+.dropZoneIcon {
+  font-size: 56px;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+
+.dropZoneText {
+  color: #9ca3af;
+  font-size: 17px;
+  margin: 0 0 6px;
+}
+
+.dropZoneFormats {
+  color: #4b5563;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.dropZoneBadge {
+  font-size: 12px;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* ── Paste textarea ───────────────────────────────────────────────── */
+
+.textarea {
+  width: 100%;
+  height: 140px;
+  border-radius: 16px;
+  padding: 16px 18px;
+  font-size: 14px;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.04);
+  color: #d1d5db;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+}
+
+.visualizeBtn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  border: none;
+  transition: background 0.15s;
+}
+
+.visualizeBtnActive {
+  background: #6366f1;
+  cursor: pointer;
+}
+
+.visualizeBtnDisabled {
+  background: rgba(99, 102, 241, 0.3);
+  cursor: default;
+}
+
+/* ── Error ────────────────────────────────────────────────────────── */
+
+.error {
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.demoBtn {
+  font-size: 14px;
+  color: #4b5563;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-align: left;
+  padding: 0;
+}
+
+/* ── Right column (saves) ─────────────────────────────────────────── */
+
+.rightCol {
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.savesLoading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.savesLoadingText {
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.savesEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 60px;
+  gap: 14px;
+}
+
+.savesEmptyIcon {
+  font-size: 52px;
+}
+
+.savesEmptyText {
+  color: #4b5563;
+  font-size: 15px;
+  text-align: center;
+}
+
+.savesList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.saveCard {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.saveCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.saveCardName {
+  color: white;
+  font-weight: 700;
+  font-size: 17px;
+  flex: 1;
+}
+
+.saveDeleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #4b5563;
+  margin-left: 8px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 17px;
+  transition: all 0.2s;
+}
+
+.saveDeleteBtnConfirm {
+  font-size: 12px;
+  background: #ef4444;
+  color: white;
+  padding: 4px 8px;
+  font-weight: 700;
+}
+
+.saveTableTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.saveTableTag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 8px;
+  /* background and color set via inline CSS vars */
+  background: var(--tag-bg, rgba(99, 102, 241, 0.13));
+  color: var(--tag-color, #6366f1);
+}
+
+.saveTableTagExtra {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #6b7280;
+}
+
+.saveCardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.saveDate {
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.openBtn {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 10px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  cursor: pointer;
+}

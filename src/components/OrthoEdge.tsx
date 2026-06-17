@@ -5,6 +5,7 @@ import {
   type EdgeProps,
 } from '@xyflow/react'
 import { HighlightCtx } from '../contexts/highlight'
+import styles from './OrthoEdge.module.css'
 
 export interface OrthoEdgeData extends Record<string, unknown> {
   label: string
@@ -57,9 +58,10 @@ export function OrthoEdge({
   const srcLabel = relType === '1:1' ? '1' : 'n'
   const endLabel = relType === 'N:M' ? 'm' : '1'
 
+  const svgTextStyle: React.CSSProperties = { pointerEvents: 'none', userSelect: 'none' }
+
   return (
     <>
-      {/* Wide invisible hitbox */}
       <path
         d={edgePath}
         fill="none"
@@ -69,7 +71,6 @@ export function OrthoEdge({
         onMouseLeave={() => setHovered(false)}
         style={{ cursor: 'default' }}
       />
-      {/* Glow layer */}
       {edgeHighlighted && (
         <path
           d={edgePath}
@@ -80,7 +81,6 @@ export function OrthoEdge({
           style={{ pointerEvents: 'none', filter: 'blur(3px)' }}
         />
       )}
-      {/* Visible edge */}
       <path
         id={id}
         d={edgePath}
@@ -90,54 +90,46 @@ export function OrthoEdge({
         strokeOpacity={edgeDimmed ? 0.06 : 1}
         style={{ transition: 'stroke-width 0.15s, stroke-opacity 0.2s', pointerEvents: 'none' }}
       />
-      {/* Endpoint dots */}
       <circle cx={startDot.x} cy={startDot.y} r={edgeHighlighted ? 5 : 4} fill={activeColor}
         opacity={edgeDimmed ? 0.06 : 1} style={{ pointerEvents: 'none' }} />
       <circle cx={endDot.x} cy={endDot.y} r={edgeHighlighted ? 5 : 4} fill={activeColor}
         opacity={edgeDimmed ? 0.06 : 1} style={{ pointerEvents: 'none' }} />
 
-      {/* Relationship type labels */}
       {relType && !edgeDimmed && (
         <>
           <text x={srcLabelX} y={srcLabelY} textAnchor="middle" dominantBaseline="middle"
             fontSize={10} fontWeight={700} fontFamily="monospace"
             stroke="#0d0f17" strokeWidth={3} paintOrder="stroke"
             fill={activeColor} opacity={edgeHighlighted ? 1 : 0.7}
-            style={{ pointerEvents: 'none', userSelect: 'none' } as React.CSSProperties}>
+            style={svgTextStyle}>
             {srcLabel}
           </text>
           <text x={endLabelX} y={endLabelY} textAnchor="middle" dominantBaseline="middle"
             fontSize={10} fontWeight={700} fontFamily="monospace"
             stroke="#0d0f17" strokeWidth={3} paintOrder="stroke"
             fill={activeColor} opacity={edgeHighlighted ? 1 : 0.7}
-            style={{ pointerEvents: 'none', userSelect: 'none' } as React.CSSProperties}>
+            style={svgTextStyle}>
             {endLabel}
           </text>
         </>
       )}
 
-      {/* Label */}
       <EdgeLabelRenderer>
         {(hovered || edgeHighlighted) && (
           <div
-            style={{
-              position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: 'none',
-              zIndex: 1000,
-            }}
+            className={styles.labelWrapper}
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
           >
             <div
-              className="text-[10px] font-mono px-2 py-0.5 rounded-full whitespace-nowrap select-none"
+              className={styles.label}
               style={{
-                background: '#1a1d27',
-                border: `1px solid ${activeColor}${edgeHighlighted ? 'cc' : '55'}`,
-                color: activeColor,
-                boxShadow: edgeHighlighted
+                '--label-border': `${activeColor}${edgeHighlighted ? 'cc' : '55'}`,
+                '--label-color': activeColor,
+                '--label-shadow': edgeHighlighted
                   ? `0 0 8px ${activeColor}66, 0 2px 8px rgba(0,0,0,0.6)`
                   : `0 2px 8px rgba(0,0,0,0.6)`,
-                fontWeight: edgeHighlighted ? 700 : 400,
-              }}
+                '--label-weight': edgeHighlighted ? 700 : 400,
+              } as React.CSSProperties}
             >
               {label}
             </div>

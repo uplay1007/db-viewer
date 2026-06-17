@@ -1,0 +1,433 @@
+/* ── Loading screen ───────────────────────────────────────────────── */
+
+.loadingScreen {
+  min-height: 100vh;
+  background: #0f1117;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingText {
+  color: #4b5563;
+  font-size: 14px;
+}
+
+/* ── Root layout ──────────────────────────────────────────────────── */
+
+.root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────────── */
+
+.topbar {
+  height: 58px;
+  background: #13151f;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 32px;
+  flex-shrink: 0;
+}
+
+.topbarBrand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 16px;
+}
+
+.topbarLogo {
+  color: white;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: -0.05em;
+}
+
+.topbarBadge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.tabRow {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tabBtn {
+  padding: 6px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  background: transparent;
+  color: #6b7280;
+}
+
+.tabBtn:hover {
+  color: #d1d5db;
+}
+
+.tabBtnActive {
+  background: #4f46e5;
+  color: white;
+  box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+}
+
+.topbarRight {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 20px;
+}
+
+.exportBtn {
+  font-size: 14px;
+  color: #6b7280;
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.exportBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+}
+
+.saveBtn {
+  font-size: 15px;
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: white;
+  border: none;
+  cursor: pointer;
+  min-width: 90px;
+  transition: filter 0.15s;
+  /* --save-bg set inline for flash animation */
+  background: var(--save-bg, #6366f1);
+}
+
+.saveBtn:hover {
+  filter: brightness(1.1);
+}
+
+.exitBtn {
+  font-size: 14px;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: color 0.15s;
+}
+
+.exitBtn:hover {
+  color: white;
+}
+
+.langToggleBtn {
+  margin-left: 16px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  background: none;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.langToggleBtn:hover {
+  color: white;
+}
+
+/* ── Content area ─────────────────────────────────────────────────── */
+
+.content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.schemaView {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  position: relative;
+}
+
+.splitEditorPane {
+  height: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.resizeHandle {
+  width: 5px;
+  height: 100%;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.15s;
+}
+
+.resizeHandle:hover {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+.canvasArea {
+  flex: 1;
+  height: 100%;
+  background: #0f1117;
+  position: relative;
+}
+
+/* ── Canvas toolbar ───────────────────────────────────────────────── */
+
+.canvasToolbar {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolPill {
+  display: flex;
+  background: rgba(26, 29, 39, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.toolBtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ca3af;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toolBtn:hover {
+  color: white;
+}
+
+.toolBtnActive {
+  background: #4f46e5;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.toolBtnDisabled {
+  color: #374151;
+  cursor: not-allowed;
+}
+
+.toolBtnIcon {
+  font-size: 15px;
+}
+
+.toolBtnLabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Groups dropdown */
+
+.groupsPill {
+  position: relative;
+  background: rgba(26, 29, 39, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.groupsBtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ca3af;
+  transition: color 0.15s;
+}
+
+.groupsBtnFiltered {
+  color: #818cf8;
+}
+
+.groupsChevron {
+  font-size: 10px;
+  opacity: 0.5;
+}
+
+.groupsDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  width: 256px;
+  background: #1a1d27;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  padding: 8px 0;
+  z-index: 50;
+}
+
+.groupsAllBtn {
+  width: 100%;
+  padding: 10px 20px;
+  text-align: left;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: background 0.15s;
+}
+
+.groupsAllBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.groupsAllBtnActive {
+  color: #818cf8;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.groupsDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  margin: 4px 0;
+}
+
+.groupsTagBtn {
+  width: 100%;
+  padding: 10px 20px;
+  text-align: left;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: background 0.15s;
+}
+
+.groupsTagBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.groupsTagBtnActive {
+  color: #818cf8;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.groupsTagLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.groupsTagDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6366f1;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+.groupsTagCount {
+  font-size: 10px;
+  opacity: 0.4;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* View select */
+.viewSelect {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  appearance: none;
+}
+
+.viewSelect:hover {
+  color: white;
+}
+
+/* ReactFlow Controls overrides — !important needed to beat ReactFlow's built-in styles */
+.reactFlowControls {
+  background: #1a1d27 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+}
