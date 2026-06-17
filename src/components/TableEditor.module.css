@@ -1,0 +1,427 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  background: #1a1d27;
+  width: min(95vw, 1100px);
+  max-height: 92vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 18px 28px;
+  /* background = accent color, set via inline CSS var */
+  background: var(--accent, #6366f1);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.headerLabel {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.nameInput {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-weight: 700;
+  border-radius: 12px;
+  outline: none;
+  font-size: 20px;
+  padding: 6px 14px;
+  min-width: 200px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.nameInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.nameInput:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.nameError {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+.closeBtn {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 28px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tableWrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 15px;
+}
+
+.col22 { width: 22%; }
+.col16 { width: 16%; }
+.col7  { width: 7%; }
+.col12 { width: 12%; }
+
+.thead {
+  background: #0f1117;
+}
+
+.th {
+  padding: 14px;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.thCenter {
+  text-align: center;
+}
+
+.row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s;
+}
+
+.row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.td {
+  padding: 10px 14px;
+}
+
+.tdCenter {
+  text-align: center;
+  padding: 10px 0;
+}
+
+.cellInput {
+  width: 100%;
+  outline: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #0f1117;
+  color: white;
+  font-size: 15px;
+  padding: 8px 12px;
+  font-family: monospace;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.cellInput:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.cellSelect {
+  width: 100%;
+  outline: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #0f1117;
+  color: white;
+  font-size: 15px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.cellSelect:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.checkboxBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 2px solid;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  /* background and border-color set via inline CSS vars */
+  background: var(--cb-bg, transparent);
+  border-color: var(--cb-border, rgba(255, 255, 255, 0.15));
+}
+
+.checkboxCenter {
+  display: flex;
+  justify-content: center;
+}
+
+.fkBtn {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0f1117;
+  padding: 8px 12px;
+  font-size: 13px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.fkBtn:hover {
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+.fkTable {
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* color set via inline CSS var */
+  color: var(--fk-color, #e5e7eb);
+}
+
+.fkDot {
+  color: #6b7280;
+}
+
+.fkCol {
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e5e7eb;
+}
+
+.fkEmpty {
+  color: #4b5563;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rowActionBtn {
+  color: #6b7280;
+  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.rowActionBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.rowDeleteBtn {
+  color: #6b7280;
+  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.rowDeleteBtn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.addColSection {
+  padding: 14px 28px 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.addColBtn {
+  color: #6b7280;
+  font-size: 15px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.15s;
+}
+
+.addColBtn:hover {
+  color: #818cf8;
+}
+
+.tagsSection {
+  padding: 10px 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tagsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tagsLabel {
+  font-size: 13px;
+  color: #6b7280;
+  margin-right: 4px;
+}
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.tagRemoveBtn {
+  color: #a5b4fc;
+  font-size: 14px;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tagInput {
+  background: #0f1117;
+  color: white;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  outline: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 110px;
+}
+
+.tagAddBtn {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  cursor: pointer;
+}
+
+.legend {
+  padding: 4px 28px 10px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 18px 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cancelBtn {
+  color: #9ca3af;
+  font-size: 15px;
+  padding: 10px 22px;
+  border-radius: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.cancelBtn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.saveBtn {
+  font-weight: 600;
+  color: white;
+  font-size: 15px;
+  padding: 10px 28px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+  /* background = accent color, set via inline CSS var */
+  background: var(--accent, #6366f1);
+}
+
+.saveBtn:hover {
+  filter: brightness(1.1);
+}
+
+.saveBtn:active {
+  transform: scale(0.95);
+}

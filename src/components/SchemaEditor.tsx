@@ -5,8 +5,7 @@ import { StreamLanguage } from '@codemirror/language'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { schemaToDSL, dslToSchema } from '../utils/schemaDSL'
 import type { Schema } from '../types/schema'
-
-// ── DSL syntax highlighting ───────────────────────────────────────────────────
+import styles from './SchemaEditor.module.css'
 
 const KEYWORDS = new Set(['Table'])
 const MODIFIERS = new Set(['pk', 'unique', 'null'])
@@ -35,8 +34,6 @@ const schemaLang = StreamLanguage.define<Record<string, never>>({
   tokenTable: {},
 })
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 interface Props {
   schema: Schema
   onSchemaChange: (schema: Schema) => void
@@ -59,14 +56,12 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [])
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [visibleCount, setVisibleCount] = useState(12)
 
-  // Push external schema changes into editor when not focused
   useEffect(() => {
     if (!isFocused.current) {
       setText(schemaToDSL(schema))
@@ -95,8 +90,6 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
     }
   }, [error])
 
-  // ── Search ────────────────────────────────────────────────────────────────
-
   const tableNames = useMemo(
     () => schema.tables.map(t => t.name),
     [schema.tables]
@@ -111,12 +104,10 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
   const scrollToTable = useCallback((name: string) => {
     const view = editorViewRef.current
     if (!view) return
-
     const doc = view.state.doc.toString()
     const re = new RegExp(`^Table\\s+${name}\\s*\\{`, 'm')
     const match = re.exec(doc)
     if (!match) return
-
     view.dispatch({
       selection: { anchor: match.index },
       effects: EditorView.scrollIntoView(match.index, { y: 'start', yMargin: 24 }),
@@ -133,112 +124,66 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
     if (e.key === 'Enter' && searchResults[selectedIdx]) scrollToTable(searchResults[selectedIdx])
   }, [searchResults, selectedIdx, scrollToTable])
 
-  // Reset selection and visible count when query changes
   useEffect(() => { setSelectedIdx(0); setVisibleCount(12) }, [searchQuery])
-
-  // Focus search input when opened
   useEffect(() => { if (searchOpen) searchRef.current?.focus() }, [searchOpen])
 
   return (
     <div
       ref={containerRef}
-      style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0d0f17' }}
+      className={styles.root}
       onFocus={() => { isFocused.current = true }}
       onBlur={handleBlur}
     >
-      {/* Header */}
-      <div style={{
-        padding: '8px 12px', flexShrink: 0,
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Schema
-        </span>
+      <div className={styles.header}>
+        <span className={styles.headerLabel}>Schema</span>
 
-        {/* Search toggle */}
         <button
           onClick={() => setSearchOpen(o => !o)}
           title="Search table (Ctrl+F)"
-          style={{
-            marginLeft: 4,
-            background: searchOpen ? 'rgba(99,102,241,0.2)' : 'transparent',
-            border: `1px solid ${searchOpen ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'}`,
-            borderRadius: 6, color: searchOpen ? '#818cf8' : '#4b5563',
-            cursor: 'pointer', padding: '3px 8px', fontSize: 12,
-            display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s',
-          }}
+          className={`${styles.searchBtn} ${searchOpen ? styles.searchBtnActive : ''}`}
         >
           <span>⌕</span>
-          <span style={{ fontSize: 10, fontWeight: 600 }}>Find table</span>
+          <span>Find table</span>
         </button>
 
-        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: error ? '#ef4444' : '#22c55e' }}>
+        <span className={`${styles.statusIndicator} ${error ? styles.statusError : styles.statusOk}`}>
           {error ? `⚠ ${error}` : '✓'}
         </span>
       </div>
 
-      {/* Search bar (collapsible) */}
       {searchOpen && (
-        <div style={{
-          padding: '6px 12px', flexShrink: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: '#0a0c14', position: 'relative',
-        }}>
+        <div className={styles.searchBar}>
           <input
             ref={searchRef}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder={`Search in ${tableNames.length} tables...`}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
-              color: '#e5e7eb', padding: '6px 10px', fontSize: 12,
-              outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box',
-            }}
+            className={styles.searchInput}
           />
 
-          {/* Results dropdown */}
           {searchResults.length > 0 && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 12, right: 12,
-              background: '#13151f', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, zIndex: 100, overflow: 'hidden',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-              maxHeight: 220, overflowY: 'auto',
-            }}>
+            <div className={styles.dropdown}>
               {searchResults.slice(0, visibleCount).map((name, i) => (
                 <button
                   key={name}
                   onMouseDown={() => scrollToTable(name)}
-                  style={{
-                    width: '100%', textAlign: 'left', padding: '7px 12px',
-                    background: i === selectedIdx ? 'rgba(99,102,241,0.15)' : 'transparent',
-                    border: 'none', cursor: 'pointer', color: i === selectedIdx ? '#818cf8' : '#9ca3af',
-                    fontSize: 12, fontFamily: 'monospace', display: 'block',
-                    borderLeft: i === selectedIdx ? '2px solid #6366f1' : '2px solid transparent',
-                    transition: 'all 0.1s',
-                  }}
                   onMouseEnter={() => setSelectedIdx(i)}
+                  className={`${styles.dropdownItem} ${i === selectedIdx ? styles.dropdownItemSelected : ''}`}
                 >
-                  <span style={{ color: '#4b5563', marginRight: 6, fontSize: 10 }}>Table</span>
+                  <span className={styles.dropdownItemTableLabel}>Table</span>
                   {name}
                 </button>
               ))}
               {searchResults.length > visibleCount && (
-                <div style={{ padding: '5px 12px 7px', display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className={styles.dropdownFooter}>
                   <button
                     onMouseDown={e => { e.preventDefault(); setVisibleCount(c => c + 5) }}
-                    style={{
-                      background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)',
-                      borderRadius: 4, color: '#818cf8', cursor: 'pointer', fontSize: 10,
-                      fontWeight: 600, padding: '2px 8px',
-                    }}
+                    className={styles.showMoreBtn}
                   >
                     Show +5
                   </button>
-                  <span style={{ fontSize: 10, color: '#374151' }}>
+                  <span className={styles.showMoreLabel}>
                     +{searchResults.length - visibleCount} more...
                   </span>
                 </div>
@@ -247,20 +192,12 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
           )}
 
           {searchQuery && searchResults.length === 0 && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 12, right: 12,
-              background: '#13151f', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#4b5563',
-              zIndex: 100,
-            }}>
-              No table found
-            </div>
+            <div className={styles.noResults}>No table found</div>
           )}
         </div>
       )}
 
-      {/* Editor */}
-      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+      <div className={styles.editorWrap}>
         <CodeMirror
           value={text}
           onChange={handleChange}

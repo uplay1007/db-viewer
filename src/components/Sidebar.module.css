@@ -1,0 +1,203 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  width: 300px;
+  background: #13151f;
+}
+
+.newBtnWrap {
+  padding: 24px 20px 16px;
+}
+
+.newBtn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: white;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #6366f1;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.newBtn:hover {
+  filter: brightness(1.1);
+}
+
+.newBtn:active {
+  transform: scale(0.95);
+}
+
+.countRow {
+  padding: 0 24px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.countLabel {
+  font-size: 11px;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.countValue {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px 12px;
+}
+
+.tableItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: default;
+  transition: background 0.15s;
+}
+
+.tableItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dot {
+  border-radius: 50%;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  /* background and box-shadow set via inline CSS vars */
+  background: var(--dot-color, #6366f1);
+  box-shadow: 0 0 6px var(--dot-glow, rgba(99, 102, 241, 0.5));
+}
+
+.nameCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tableName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  color: #d1d5db;
+  font-size: 15px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.tableName:hover {
+  color: white;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.tag {
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.1);
+  color: rgba(165, 180, 252, 0.8);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.colCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 7px;
+  border-radius: 6px;
+  min-width: 26px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.tableItem:hover .actions {
+  opacity: 1;
+}
+
+.editBtn {
+  font-size: 15px;
+  padding: 2px 5px;
+  color: #6b7280;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.editBtn:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.deleteBtn {
+  font-size: 15px;
+  padding: 2px 5px;
+  color: #6b7280;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.exitBtn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #6b7280;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.exitBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}

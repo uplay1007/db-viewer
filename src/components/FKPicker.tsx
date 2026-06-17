@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Table, ForeignKey } from '../types/schema'
 import { tableColor } from '../utils/colors'
+import styles from './FKPicker.module.css'
 
 interface Props {
   tables: Table[]
@@ -30,84 +31,62 @@ export function FKPicker({ tables, value, onChange, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.5)' }}
+      className={styles.overlay}
       onClick={() => selectedTable ? setSelectedTable(null) : onClose()}
     >
-      <div
-        className="rounded-2xl border border-white/10 shadow-2xl flex flex-col"
-        style={{ background: '#1a1d27', width: 420, maxHeight: 520 }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between shrink-0 px-5 py-4 border-b border-white/[0.07]">
-          <div className="flex items-center gap-2">
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
             {selectedTable && (
-              <button
-                onClick={() => setSelectedTable(null)}
-                className="hover:bg-white/10 rounded-lg transition-colors p-1 mr-1"
-                style={{ color: '#9ca3af', fontSize: 18, lineHeight: 1 }}
-              >
+              <button onClick={() => setSelectedTable(null)} className={styles.backBtn}>
                 ←
               </button>
             )}
-            <span className="text-white font-semibold text-sm">
-              {selectedTable
-                ? <><span style={{ color: tableColor(selectedTable.name) }}>{selectedTable.name}</span><span className="text-gray-500 ml-1">— pick column</span></>
-                : 'Link foreign key'
-              }
+            <span className={styles.headerTitle}>
+              {selectedTable ? (
+                <>
+                  <span style={{ color: tableColor(selectedTable.name) }}>{selectedTable.name}</span>
+                  <span className={styles.headerSub}>— pick column</span>
+                </>
+              ) : 'Link foreign key'}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="hover:bg-white/10 rounded-lg transition-colors"
-            style={{ color: '#6b7280', fontSize: 22, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            ×
-          </button>
+          <button onClick={onClose} className={styles.closeBtn}>×</button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className={styles.body}>
           {!selectedTable ? (
             <>
               {value && (
                 <>
                   <button
                     onClick={() => { onChange(undefined); onClose() }}
-                    className="w-full px-5 py-2.5 text-left text-sm flex items-center gap-2 hover:bg-white/5 transition-colors"
-                    style={{ color: '#f87171' }}
+                    className={styles.clearBtn}
                   >
-                    <span style={{ fontSize: 13 }}>✕</span>
+                    <span className={styles.clearBtnIcon}>✕</span>
                     <span>Clear link</span>
-                    <span className="ml-auto font-mono text-xs opacity-40">{value.table}.{value.column}</span>
+                    <span className={styles.clearBtnCurrent}>{value.table}.{value.column}</span>
                   </button>
-                  <div className="h-px mx-4 my-1" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                  <div className={styles.divider} />
                 </>
               )}
               {tables.map(tbl => (
                 <button
                   key={tbl.name}
                   onClick={() => setSelectedTable(tbl)}
-                  className="w-full px-5 py-3 text-left flex items-center justify-between hover:bg-white/5 transition-colors group"
+                  className={styles.tableBtn}
                 >
                   <span
-                    className="font-mono text-sm font-semibold"
+                    className={styles.tableBtnName}
                     style={{ color: tableColor(tbl.name) }}
                   >
                     {tbl.name}
                   </span>
-                  <div className="flex items-center gap-1.5 flex-wrap justify-end max-w-[55%]">
+                  <div className={styles.tableBtnRight}>
                     {tbl.tags?.map(tag => (
-                      <span
-                        key={tag}
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                        style={{ background: 'rgba(255,255,255,0.06)', color: '#9ca3af' }}
-                      >
-                        #{tag}
-                      </span>
+                      <span key={tag} className={styles.tag}>#{tag}</span>
                     ))}
-                    <span className="text-gray-600 group-hover:text-gray-400 transition-colors ml-1" style={{ fontSize: 14 }}>›</span>
+                    <span className={styles.tableArrow}>›</span>
                   </div>
                 </button>
               ))}
@@ -119,21 +98,21 @@ export function FKPicker({ tables, value, onChange, onClose }: Props) {
                 <button
                   key={col.name}
                   onClick={() => handlePickColumn(selectedTable, col.name)}
-                  className="w-full px-5 py-3 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
+                  className={styles.colBtn}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className={styles.colBtnLeft}>
                     <span
-                      className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                      className={styles.radio}
                       style={{
-                        borderColor: isSelected ? '#6366f1' : 'rgba(255,255,255,0.2)',
-                        background: isSelected ? '#6366f1' : 'transparent',
-                      }}
+                        '--radio-border': isSelected ? '#6366f1' : 'rgba(255,255,255,0.2)',
+                        '--radio-bg': isSelected ? '#6366f1' : 'transparent',
+                      } as React.CSSProperties}
                     >
-                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+                      {isSelected && <span className={styles.radioDot} />}
                     </span>
-                    <span className="font-mono text-sm text-white">{col.name}</span>
+                    <span className={styles.colName}>{col.name}</span>
                   </div>
-                  <span className="text-xs font-mono" style={{ color: '#6b7280' }}>{col.type}</span>
+                  <span className={styles.colType}>{col.type}</span>
                 </button>
               )
             })
