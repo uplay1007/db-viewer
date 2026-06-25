@@ -403,15 +403,10 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       rects.set(n.id, { x: n.position.x, y: n.position.y, w: m?.width ?? 280, h: m?.height ?? 120 })
     }
 
-    // pin the dropped node — and the whole group if it was a group drag
-    const pinned = new Set<string>()
-    if (highlightCtxValue.highlighted.has(node.id)) {
-      highlightCtxValue.highlighted.forEach(id => pinned.add(id))
-    } else {
-      pinned.add(node.id)
-    }
-
-    const resolved = resolveOverlaps(rects, pinned)
+    // pin only the grabbed node; everything else (incl. highlighted FK
+    // neighbors that moved with it) is pushable, so overlaps within the
+    // highlighted group get resolved too
+    const resolved = resolveOverlaps(rects, new Set([node.id]))
 
     if (!tagFilter) {
       resolved.forEach((p, id) => { masterPositionsRef.current[id] = p })
@@ -421,7 +416,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       if (!p || (p.x === n.position.x && p.y === n.position.y)) return n
       return { ...n, position: p }
     }))
-  }, [highlightCtxValue.highlighted, setNodes, tagFilter])
+  }, [setNodes, tagFilter])
 
   const t = T[lang]
   const handleEdit = useCallback((table: Table) => setEditorState(table.name), [])
