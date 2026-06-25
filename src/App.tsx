@@ -283,10 +283,12 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     if (visibleNames.size === 0) return
 
     const heights: Record<string, number> = {}
-    nodesRef.current.forEach(n => {
-      const h = (n.measured as { height?: number } | undefined)?.height
-      if (h) heights[n.id] = h
-    })
+    if (viewMode !== 'collapsed') {
+      nodesRef.current.forEach(n => {
+        const h = (n.measured as { height?: number } | undefined)?.height
+        if (h) heights[n.id] = h
+      })
+    }
 
     computeELKLayout(schema, heights, visibleNames).then(({ positions }) => {
       setNodes(prev => prev.map(n =>
@@ -294,7 +296,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       ))
       setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 50)
     })
-  }, [tagFilter, schema, setNodes])
+  }, [tagFilter, schema, setNodes, viewMode])
 
   const highlightCtxValue = useMemo((): HighlightCtxValue => {
     if (!highlightTable || !schema) {
@@ -318,10 +320,12 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setLayouting(true)
     try {
       const heights: Record<string, number> = {}
-      nodesRef.current.forEach(n => {
-        const h = (n.measured as { height?: number } | undefined)?.height
-        if (h) heights[n.id] = h
-      })
+      if (viewMode !== 'collapsed') {
+        nodesRef.current.forEach(n => {
+          const h = (n.measured as { height?: number } | undefined)?.height
+          if (h) heights[n.id] = h
+        })
+      }
       const { positions } = await computeELKLayout(schema, heights)
       if (!tagFilter) masterPositionsRef.current = { ...positions }
       setNodes(prev => prev.map(n => ({ ...n, position: positions[n.id] ?? n.position })))
@@ -330,7 +334,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     } finally {
       setLayouting(false)
     }
-  }, [schema, layouting, setNodes, tagFilter])
+  }, [schema, layouting, setNodes, tagFilter, viewMode])
 
   useEffect(() => {
     if (!pendingELK || layouting || nodes.length === 0) return
