@@ -27,6 +27,7 @@ import { HighlightCtx, type HighlightCtxValue } from './contexts/highlight'
 import { ViewModeCtx, type ViewMode, type ViewModeCtxValue } from './contexts/viewMode'
 import { OrthoEdge, type OrthoEdgeData } from './components/OrthoEdge'
 import { computeELKLayout } from './services/layoutService'
+import { resolveOverlaps, type Rect } from './utils/separateNodes'
 import { TableEditor } from './components/TableEditor'
 import { Sidebar } from './components/Sidebar'
 import { SchemaEditor } from './components/SchemaEditor'
@@ -392,6 +393,36 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     }))
   }, [highlightCtxValue.highlighted, setNodes, tagFilter])
 
+  const handleNodeDragStop = useCallback((_e: MouseEvent | TouchEvent, node: Node) => {
+    const current = nodesRef.current
+    if (current.length === 0) return
+
+    const rects = new Map<string, Rect>()
+    for (const n of current) {
+      const m = n.measured as { width?: number; height?: number } | undefined
+      rects.set(n.id, { x: n.position.x, y: n.position.y, w: m?.width ?? 280, h: m?.height ?? 120 })
+    }
+
+    // pin the dropped node — and the whole group if it was a group drag
+    const pinned = new Set<string>()
+    if (highlightCtxValue.highlighted.has(node.id)) {
+      highlightCtxValue.highlighted.forEach(id => pinned.add(id))
+    } else {
+      pinned.add(node.id)
+    }
+
+    const resolved = resolveOverlaps(rects, pinned)
+
+    if (!tagFilter) {
+      resolved.forEach((p, id) => { masterPositionsRef.current[id] = p })
+    }
+    setNodes(prev => prev.map(n => {
+      const p = resolved.get(n.id)
+      if (!p || (p.x === n.position.x && p.y === n.position.y)) return n
+      return { ...n, position: p }
+    }))
+  }, [highlightCtxValue.highlighted, setNodes, tagFilter])
+
   const t = T[lang]
   const handleEdit = useCallback((table: Table) => setEditorState(table.name), [])
 
@@ -736,6 +767,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                       onEdgesChange={onEdgesChange}
                       onNodeDragStart={handleNodeDragStart}
                       onNodeDrag={handleNodeDrag}
+                      onNodeDragStop={handleNodeDragStop}
                       onSelectionChange={handleSelectionChange}
                       nodeTypes={NODE_TYPES}
                       edgeTypes={EDGE_TYPES}
