@@ -10,7 +10,7 @@ export function parseTypeORM(text: string): Schema {
     const body = m[2]
     const columns: Column[] = []
 
-    const colRegex = /@(PrimaryGeneratedColumn|PrimaryColumn|Column|ManyToOne|OneToOne)\s*(?:\([^()]*(?:\([^()]*\)[^()]*)*\))?\s*\n\s*(\w+)\s*[!?]?\s*:\s*([\w<>|[\] ]+)/g
+    const colRegex = /@(PrimaryGeneratedColumn|PrimaryColumn|Column|ManyToOne|OneToOne)\s*(?:\([^()]*(?:\([^()]*\)[^()]*)*\))?(?:\s*\n\s*@[^\n]*)?\s*\n\s*(\w+)\s*[!?]?\s*:\s*([\w<>|[\] ]+)/g
     let c: RegExpExecArray | null
 
     while ((c = colRegex.exec(body)) !== null) {
