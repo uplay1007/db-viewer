@@ -163,13 +163,15 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   const [schema, setSchema] = useState<Schema | null>(session?.schema ?? null)
   const [currentSaveId, setCurrentSaveId] = useState<string | undefined>(session?.saveId)
-  const currentSaveName = useRef<string | null>(null)
+  const currentSaveIdRef = useRef<string | undefined>(session?.saveId)
+  const currentSaveName = useRef<string | null>(session?.saveName ?? null)
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const nodesRef = useRef<Node[]>([])
   useEffect(() => { nodesRef.current = nodes }, [nodes])
+  useEffect(() => { currentSaveIdRef.current = currentSaveId }, [currentSaveId])
 
   const masterPositionsRef = useRef<Record<string, { x: number; y: number }>>(session?.positions ?? {})
 
@@ -429,7 +431,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     const schemaToUse = { ...s, tables: s.tables.map(t => t.tags !== undefined ? t : { ...t, tags: [] }) }
     if (initialSavedPos) masterPositionsRef.current = { ...initialSavedPos }
     setSchema(schemaToUse)
-    saveCurrentSession({ schema: schemaToUse, positions: masterPositionsRef.current })
+    saveCurrentSession({ schema: schemaToUse, positions: masterPositionsRef.current, saveId: currentSaveIdRef.current, saveName: currentSaveName.current ?? undefined })
     const { nodes: n, edges: e } = schemaToFlow(schemaToUse, handleEdit, masterPositionsRef.current, currentNodes)
     setNodes(n)
     setEdges(e)
@@ -450,7 +452,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   useEffect(() => {
     if (nodes.length === 0 || !schema) return
     const handle = setTimeout(() => {
-      saveCurrentSession({ schema, positions: masterPositionsRef.current })
+      saveCurrentSession({ schema, positions: masterPositionsRef.current, saveId: currentSaveIdRef.current, saveName: currentSaveName.current ?? undefined })
     }, 1000)
     return () => clearTimeout(handle)
   }, [nodes, schema])
@@ -496,6 +498,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         if (!name) return
         const saved = await upsertSave(name, schema, posMap)
         setCurrentSaveId(saved.id)
+        currentSaveIdRef.current = saved.id
         currentSaveName.current = name
       }
     } catch (e) {
@@ -522,6 +525,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   const handleExit = useCallback(() => {
     clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined)
+    currentSaveIdRef.current = undefined
+    currentSaveName.current = null
     setFileHandle(null); setTagFilter(null); setEditorState(null)
   }, [])
 
@@ -572,6 +577,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const handleOpen = useCallback((result: OpenResult) => {
     setHighlightTable(null); setTagFilter(null)
     setCurrentSaveId(result.savedId)
+    currentSaveIdRef.current = result.savedId
     currentSaveName.current = result.savedName ?? null
     setFileHandle(result.fileHandle ?? null)
     applySchema(result.schema, undefined, result.positions)
