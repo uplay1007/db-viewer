@@ -8,12 +8,15 @@ import { parseSQLAlchemy } from './sqlalchemy'
 
 export type ParserType = 'json' | 'prisma' | 'sql' | 'typeorm' | 'django' | 'sqlalchemy'
 
-export function detectParser(filename: string): ParserType {
+export function detectParser(filename: string, content?: string): ParserType {
   if (filename.endsWith('.prisma')) return 'prisma'
   if (filename.endsWith('.sql')) return 'sql'
   if (filename.endsWith('.json')) return 'json'
   if (filename.endsWith('.ts')) return 'typeorm'
-  if (filename.endsWith('.py')) return 'django'
+  if (filename.endsWith('.py')) {
+    if (content && (content.includes('from sqlalchemy') || content.includes('import sqlalchemy') || content.includes('db.Model'))) return 'sqlalchemy'
+    return 'django'
+  }
   return 'json'
 }
 

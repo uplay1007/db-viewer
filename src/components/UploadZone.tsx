@@ -87,9 +87,9 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
     if (hasFileAccess) {
       const result = await openFilePicker(['.json', '.prisma', '.sql', '.ts', '.py'])
       if (!result) return
-      const type = detectParser(result.file.name)
-      setParserType(type)
       const content = await result.file.text()
+      const type = detectParser(result.file.name, content)
+      setParserType(type)
       processText(content, type, result.handle)
     } else {
       document.getElementById('file-input-fallback')?.click()
@@ -98,8 +98,7 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
 
   const onFileFallback = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
-    const type = detectParser(file.name); setParserType(type)
-    file.text().then(c => processText(c, type))
+    file.text().then(c => { const type = detectParser(file.name, c); setParserType(type); processText(c, type) })
     e.target.value = ''
   }, [processText])
 
@@ -108,13 +107,13 @@ export function UploadZone({ lang, onLangToggle, onOpen }: Props) {
     const handle = await getHandleFromDrop(e)
     if (handle) {
       const file = await handle.getFile()
-      const type = detectParser(file.name); setParserType(type)
       const content = await file.text()
+      const type = detectParser(file.name, content)
+      setParserType(type)
       processText(content, type, handle)
     } else {
       const file = e.dataTransfer.files[0]; if (!file) return
-      const type = detectParser(file.name); setParserType(type)
-      file.text().then(c => processText(c, type))
+      file.text().then(c => { const type = detectParser(file.name, c); setParserType(type); processText(c, type) })
     }
   }, [processText])
 

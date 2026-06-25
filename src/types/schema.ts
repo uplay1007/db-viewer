@@ -10,7 +10,6 @@ export interface Column {
   foreignKey?: ForeignKey
   nullable?: boolean
   unique?: boolean
-  default?: string
 }
 
 export interface Table {

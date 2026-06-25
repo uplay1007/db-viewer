@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { tagColor } from '../utils/colors'
 import type { Table } from '../types/schema'
 import { T, type Lang } from '../i18n'
@@ -17,6 +18,10 @@ interface Props {
 
 export function Sidebar({ tables, lang, onLangToggle, onNew, onEdit, onDelete, onExit }: Props) {
   const t = T[lang]
+  const [search, setSearch] = useState('')
+  const filtered = search.trim()
+    ? tables.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
+    : tables
 
   return (
     <div className={styles.sidebar}>
@@ -31,8 +36,19 @@ export function Sidebar({ tables, lang, onLangToggle, onNew, onEdit, onDelete, o
         <span className={styles.countValue}>{tables.length}</span>
       </div>
 
+      {tables.length > 8 && (
+        <div className={styles.searchWrap}>
+          <input
+            className={styles.searchInput}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search tables…"
+          />
+        </div>
+      )}
+
       <div className={styles.list}>
-        {tables.map(table => {
+        {filtered.map(table => {
           const color = tagColor(table.tags)
           return (
             <div key={table.name} className={styles.tableItem}>
