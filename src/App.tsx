@@ -16,7 +16,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import type { Schema, Table, Column } from './types/schema'
+import type { Schema, Table, Column, Layout } from './types/schema'
 import { computeLayout } from './utils/layout'
 import { tableColor, tagColor } from './utils/colors'
 import {
@@ -48,8 +48,13 @@ const EDGE_TYPES = { fk: OrthoEdge }
 
 function NodesInitializedFitView({ rfRef }: { rfRef: React.RefObject<ReactFlowInstance<any, any> | null> }) {
   const initialized = useNodesInitialized()
+  const didFit = useRef(false)
   useEffect(() => {
-    if (initialized) rfRef.current?.fitView({ padding: 0.2, duration: 300 })
+    // fit once per mount (fresh schema open); never on later node re-inits (edits)
+    if (initialized && !didFit.current) {
+      didFit.current = true
+      rfRef.current?.fitView({ padding: 0.2, duration: 300 })
+    }
   }, [initialized, rfRef])
   return null
 }
@@ -191,7 +196,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const [groupsOpen, setGroupsOpen] = useState(false)
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null)
   const [layoutsOpen, setLayoutsOpen] = useState(false)
-  const [layoutMenuId, setLayoutMenuId] = useState<string | null>(null)
+  const [layoutSettingsId, setLayoutSettingsId] = useState<string | null>(null)
   const layoutsBtnRef = useRef<HTMLDivElement>(null)
   // live per-layout positions (mirrors masterPositionsRef); folded into schema.layouts on save
   const layoutPosRef = useRef<Record<string, Record<string, { x: number; y: number }>>>({})
@@ -298,7 +303,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   useEffect(() => {
     if (!layoutsOpen) return
     const handler = (e: MouseEvent) => {
-      if (!layoutsBtnRef.current?.contains(e.target as globalThis.Node)) { setLayoutsOpen(false); setLayoutMenuId(null) }
+      if (!layoutsBtnRef.current?.contains(e.target as globalThis.Node)) setLayoutsOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -310,8 +315,12 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setGroupsOpen(false)
   }, [])
 
+  const prevTagFilterRef = useRef<string | null>(tagFilter)
   useEffect(() => {
     if (!schema) return
+    // only re-frame when the tag group actually changes — not on content/viewMode edits
+    const tagChanged = prevTagFilterRef.current !== tagFilter
+    prevTagFilterRef.current = tagFilter
     setHighlightTable(null)
 
     if (!tagFilter) {
@@ -321,7 +330,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
           position: masterPositionsRef.current[n.id] ?? n.position,
         })))
       }
-      setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 50)
+      if (tagChanged) setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 50)
       return
     }
 
@@ -340,7 +349,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       setNodes(prev => prev.map(n =>
         positions[n.id] ? { ...n, position: positions[n.id] } : n
       ))
-      setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 50)
+      if (tagChanged) setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 50)
     })
   }, [tagFilter, schema, setNodes, viewMode])
 
@@ -515,7 +524,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setActiveLayoutId(id)
     setTagFilter(null)
     setHighlightTable(null); setSelectedTables(new Set())
-    setLayoutsOpen(false); setLayoutMenuId(null)
+    setLayoutsOpen(false)
     setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 60)
   }, [])
 
@@ -538,25 +547,16 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 60)
   }, [schema, highlightCtxValue.highlighted])
 
-  const renameLayout = useCallback(async (id: string) => {
-    if (!schema) return
-    const layout = schema.layouts?.find(l => l.id === id)
-    if (!layout) return
-    const name = await dialog.prompt(
-      lang === 'ru' ? 'Переименовать layout' : 'Rename layout',
-      lang === 'ru' ? 'Новое название' : 'New name',
-      layout.name
-    )
-    if (!name) return
-    setSchema({ ...schema, layouts: schema.layouts!.map(l => l.id === id ? { ...l, name: name.trim() } : l) })
-    setLayoutMenuId(null)
-  }, [schema, dialog, lang])
+  const renameLayout = useCallback((id: string, name: string) => {
+    if (!schema || !name.trim()) return
+    setSchema({ ...schema, layouts: (schema.layouts ?? []).map(l => l.id === id ? { ...l, name: name.trim() } : l) })
+  }, [schema])
 
   const deleteLayout = useCallback((id: string) => {
     if (!schema) return
     delete layoutPosRef.current[id]
     setSchema({ ...schema, layouts: (schema.layouts ?? []).filter(l => l.id !== id) })
-    setLayoutMenuId(null)
+    setLayoutSettingsId(null)
     if (activeLayoutId === id) selectLayout(null)
   }, [schema, activeLayoutId, selectLayout])
 
@@ -910,6 +910,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                         {activeLayoutId === null && <span>✓</span>}
                       </button>
                       <div className={appStyles.groupsDivider} />
+                      {(schema.layouts ?? []).length === 0 && (
+                        <div className={appStyles.layoutEmpty}>
+                          {lang === 'ru' ? 'Пока нет слоёв' : 'No layouts yet'}
+                        </div>
+                      )}
                       {(schema.layouts ?? []).map(l => (
                         <div key={l.id} className={appStyles.layoutRow}>
                           <button
@@ -923,29 +928,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                           </button>
                           <button
                             className={appStyles.layoutMenuBtn}
-                            onClick={e => { e.stopPropagation(); setLayoutMenuId(m => m === l.id ? null : l.id) }}
+                            onClick={e => { e.stopPropagation(); setLayoutsOpen(false); setLayoutSettingsId(l.id) }}
                             title={lang === 'ru' ? 'Настройки слоя' : 'Layout settings'}
                           >⋯</button>
-                          {layoutMenuId === l.id && (
-                            <div className={appStyles.layoutMenu}>
-                              <button className={appStyles.layoutMenuItem} onClick={() => renameLayout(l.id)}>
-                                {lang === 'ru' ? 'Переименовать' : 'Rename'}
-                              </button>
-                              <button className={`${appStyles.layoutMenuItem} ${appStyles.layoutMenuItemDanger}`} onClick={() => deleteLayout(l.id)}>
-                                {lang === 'ru' ? 'Удалить' : 'Delete'}
-                              </button>
-                            </div>
-                          )}
                         </div>
                       ))}
-                      {selectedTables.size > 0 && (
-                        <>
-                          <div className={appStyles.groupsDivider} />
-                          <button className={appStyles.layoutAddBtn} onClick={createLayoutFromSelection}>
-                            + {lang === 'ru' ? 'Новый слой из выбранных' : 'New layout from selection'} ({highlightCtxValue.highlighted.size})
-                          </button>
-                        </>
-                      )}
                     </div>
                   )}
                 </div>
@@ -975,6 +962,15 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                   </button>
                 </div>
               </div>
+
+              {/* Create-layout button — appears when a table (or group) is selected */}
+              {highlightCtxValue.highlighted.size > 0 && !activeLayout && (
+                <button className={appStyles.createLayoutFab} onClick={createLayoutFromSelection}>
+                  <span className={appStyles.createLayoutFabIcon}>▦</span>
+                  {lang === 'ru' ? 'Создать слой' : 'Create layout'}
+                  <span className={appStyles.createLayoutFabCount}>{highlightCtxValue.highlighted.size}</span>
+                </button>
+              )}
 
               <ViewModeCtx.Provider value={{ mode: viewMode, bulkExpand, bulkKey }}>
                 <HighlightCtx.Provider value={highlightCtxValue}>
@@ -1036,6 +1032,62 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         const editedTable = editorState === 'new' ? null : schema.tables.find(t => t.name === editorState) ?? null
         return <TableEditor key={editorState} table={editedTable} schema={schema} lang={lang} onSave={handleEditorSave} onClose={() => setEditorState(null)} />
       })()}
+
+      {layoutSettingsId !== null && (() => {
+        const layout = schema.layouts?.find(l => l.id === layoutSettingsId)
+        if (!layout) return null
+        return (
+          <LayoutSettingsModal
+            key={layout.id}
+            layout={layout}
+            lang={lang}
+            onRename={name => renameLayout(layout.id, name)}
+            onDelete={() => deleteLayout(layout.id)}
+            onClose={() => setLayoutSettingsId(null)}
+          />
+        )
+      })()}
+    </div>
+  )
+}
+
+function LayoutSettingsModal({ layout, lang, onRename, onDelete, onClose }: {
+  layout: Layout
+  lang: Lang
+  onRename: (name: string) => void
+  onDelete: () => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState(layout.name)
+  const save = () => { onRename(name); onClose() }
+  return (
+    <div className={appStyles.layoutModalOverlay} onClick={onClose}>
+      <div className={appStyles.layoutModal} onClick={e => e.stopPropagation()}>
+        <div className={appStyles.layoutModalHeader}>
+          <span className={appStyles.layoutModalTitle}>{lang === 'ru' ? 'Настройки слоя' : 'Layout settings'}</span>
+          <button className={appStyles.layoutModalClose} onClick={onClose}>×</button>
+        </div>
+        <label className={appStyles.layoutModalLabel}>{lang === 'ru' ? 'Название' : 'Name'}</label>
+        <input
+          className={appStyles.layoutModalInput}
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') save() }}
+          autoFocus
+        />
+        <div className={appStyles.layoutModalMeta}>
+          {layout.tables.length} {lang === 'ru' ? 'таблиц' : 'tables'}
+        </div>
+        <div className={appStyles.layoutModalFooter}>
+          <button className={appStyles.layoutModalDelete} onClick={onDelete}>
+            {lang === 'ru' ? 'Удалить слой' : 'Delete layout'}
+          </button>
+          <div className={appStyles.layoutModalFooterRight}>
+            <button className={appStyles.layoutModalCancel} onClick={onClose}>{lang === 'ru' ? 'Отмена' : 'Cancel'}</button>
+            <button className={appStyles.layoutModalSave} onClick={save}>{lang === 'ru' ? 'Сохранить' : 'Save'}</button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

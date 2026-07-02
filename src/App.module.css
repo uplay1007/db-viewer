@@ -369,61 +369,170 @@
   color: #e5e7eb;
 }
 
-.layoutMenu {
-  position: absolute;
-  top: 100%;
-  right: 10px;
-  margin-top: 2px;
-  width: 160px;
-  background: #22252f;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
-  padding: 6px 0;
-  z-index: 60;
-}
-
-.layoutMenuItem {
-  width: 100%;
-  padding: 9px 16px;
-  text-align: left;
-  font-size: 13px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #d1d5db;
-  transition: background 0.15s;
-}
-
-.layoutMenuItem:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.layoutMenuItemDanger {
-  color: #f87171;
-}
-
-.layoutMenuItemDanger:hover {
-  background: rgba(239, 68, 68, 0.14);
-}
-
-.layoutAddBtn {
-  width: 100%;
+.layoutEmpty {
   padding: 10px 20px;
-  text-align: left;
   font-size: 13px;
-  font-weight: 600;
-  background: none;
+  color: #6b7280;
+}
+
+/* ── Create-layout floating button ────────────────────────────────── */
+
+.createLayoutFab {
+  position: absolute;
+  top: 84px;
+  left: 24px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 14px;
   border: none;
+  background: #6366f1;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  color: #818cf8;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45);
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.createLayoutFab:hover { filter: brightness(1.1); }
+.createLayoutFab:active { transform: scale(0.97); }
+
+.createLayoutFabIcon { font-size: 16px; }
+
+.createLayoutFabCount {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 1px 8px;
+  font-size: 13px;
+}
+
+/* ── Layout settings modal ────────────────────────────────────────── */
+
+.layoutModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.layoutModal {
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  background: #1a1d27;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  padding: 24px;
+}
+
+.layoutModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.layoutModalTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: white;
+}
+
+.layoutModalClose {
+  border: none;
+  background: none;
+  color: #6b7280;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.layoutModalClose:hover { color: white; }
+
+.layoutModalLabel {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.layoutModalInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e5e7eb;
+  font-size: 15px;
+  outline: none;
+}
+
+.layoutModalInput:focus { border-color: #6366f1; }
+
+.layoutModalMeta {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.layoutModalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 28px;
+}
+
+.layoutModalFooterRight { display: flex; gap: 10px; }
+
+.layoutModalDelete {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: none;
+  color: #f87171;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
   transition: background 0.15s;
 }
 
-.layoutAddBtn:hover {
-  background: rgba(99, 102, 241, 0.12);
+.layoutModalDelete:hover { background: rgba(239, 68, 68, 0.14); }
+
+.layoutModalCancel {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: none;
+  color: #9ca3af;
+  font-size: 14px;
+  cursor: pointer;
 }
+
+.layoutModalCancel:hover { background: rgba(255, 255, 255, 0.05); }
+
+.layoutModalSave {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #6366f1;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.layoutModalSave:hover { filter: brightness(1.1); }
 
 .groupsAllBtn:hover {
   background: rgba(255, 255, 255, 0.05);
