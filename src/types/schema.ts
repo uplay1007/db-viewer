@@ -28,6 +28,5 @@ export interface Layout {
 
 export interface Schema {
   tables: Table[]
-  data?: Record<string, Record<string, unknown>[]>
   layouts?: Layout[]
 }

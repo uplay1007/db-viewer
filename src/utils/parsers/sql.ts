@@ -97,36 +97,7 @@ export function parseSQL(text: string): Schema {
     tables.push(entry)
   }
 
-  // parse INSERT INTO data
-  const data: Record<string, Record<string, unknown>[]> = {}
-  const insertRegex = /INSERT\s+INTO\s+[`"']?(\w+)[`"']?\s*\(([^)]+)\)\s*VALUES\s*([\s\S]+?)(?=;|$)/gi
-  let ins: RegExpExecArray | null
-
-  while ((ins = insertRegex.exec(clean)) !== null) {
-    const tblName = ins[1]
-    const cols = ins[2].split(',').map(c => c.trim().replace(/[`"']/g, ''))
-    const valuesBlock = ins[3]
-
-    // extract each (...) value tuple
-    const tupleRegex = /\(([^)]+)\)/g
-    let tuple: RegExpExecArray | null
-    if (!data[tblName]) data[tblName] = []
-
-    while ((tuple = tupleRegex.exec(valuesBlock)) !== null) {
-      const vals = splitTopLevel(tuple[1]).map(v => {
-        const s = v.trim()
-        if (s.toUpperCase() === 'NULL') return null
-        if (/^'(.*)'$/.test(s)) return s.slice(1, -1)
-        const n = Number(s)
-        return isNaN(n) ? s : n
-      })
-      const row: Record<string, unknown> = {}
-      cols.forEach((c, i) => { row[c] = vals[i] ?? null })
-      data[tblName].push(row)
-    }
-  }
-
-  return { tables, data: Object.keys(data).length ? data : undefined }
+  return { tables }
 }
 
 export function exportSQL(schema: Schema): string {
@@ -169,24 +140,6 @@ export function exportSQL(schema: Schema): string {
 
     lines.push(colLines.join(',\n'))
     lines.push(');\n')
-  }
-
-  // INSERT data
-  if (schema.data) {
-    for (const [tblName, rows] of Object.entries(schema.data)) {
-      if (!rows.length) continue
-      const cols = Object.keys(rows[0])
-      const valStrings = rows.map(row => {
-        const vals = cols.map(c => {
-          const v = row[c]
-          if (v === null || v === undefined) return 'NULL'
-          if (typeof v === 'string') return `'${v.replace(/'/g, "''")}'`
-          return String(v)
-        })
-        return `(${vals.join(', ')})`
-      })
-      lines.push(`INSERT INTO "${tblName}" (${cols.map(c => `"${c}"`).join(', ')}) VALUES\n${valStrings.join(',\n')};\n`)
-    }
   }
 
   return lines.join('\n')

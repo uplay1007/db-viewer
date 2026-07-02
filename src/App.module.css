@@ -61,36 +61,6 @@
   letter-spacing: 0.1em;
 }
 
-.tabRow {
-  display: flex;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.tabBtn {
-  padding: 6px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  background: transparent;
-  color: #6b7280;
-}
-
-.tabBtn:hover {
-  color: #d1d5db;
-}
-
-.tabBtnActive {
-  background: #4f46e5;
-  color: white;
-  box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
-}
 
 .topbarRight {
   margin-left: auto;

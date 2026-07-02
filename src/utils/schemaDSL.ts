@@ -70,5 +70,5 @@ export function dslToSchema(text: string, prevSchema?: Schema): Schema {
     tables.push({ name, columns, tags: prevTagsMap.get(name) ?? [] })
   }
 
-  return { tables, data: prevSchema?.data }
+  return { tables }
 }

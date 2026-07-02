@@ -21,7 +21,7 @@ export function loadCurrentSession(): CurrentSession | null {
     const raw = localStorage.getItem(CURRENT_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as CurrentSession
-    // discard sessions from older versions (they may lack schema.data etc.)
+    // discard sessions from older, incompatible formats
     if (parsed.v !== SESSION_VERSION) {
       localStorage.removeItem(CURRENT_KEY)
       return null

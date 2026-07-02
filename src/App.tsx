@@ -32,7 +32,6 @@ import { resolveOverlaps, type Rect } from './utils/separateNodes'
 import { TableEditor } from './components/TableEditor'
 import { Sidebar } from './components/Sidebar'
 import { SchemaEditor } from './components/SchemaEditor'
-import { DataViewer } from './components/DataViewer'
 import { UploadZone, type OpenResult } from './components/UploadZone'
 import { writeToHandle } from './utils/fileAccess'
 import { exportSQL } from './utils/parsers/sql'
@@ -79,7 +78,7 @@ function schemaToFlow(
   )
   const layoutMap = tablesNeedingLayout.length > 0
     ? Object.fromEntries(
-        computeLayout({ tables: tablesNeedingLayout, data: schema.data })
+        computeLayout({ tables: tablesNeedingLayout })
           .map(p => [p.id, { x: p.x, y: p.y }])
       )
     : {}
@@ -127,7 +126,6 @@ function schemaToFlow(
 }
 
 type EditorState = null | 'new' | string
-type Tab = 'schema' | 'data'
 
 function exportJSON(schema: Schema) {
   const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' })
@@ -184,7 +182,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const masterPositionsRef = useRef<Record<string, { x: number; y: number }>>(session?.positions ?? {})
 
   const [editorState, setEditorState] = useState<EditorState>(null)
-  const [activeTab, setActiveTab] = useState<Tab>('schema')
   const [saveFlash, setSaveFlash] = useState(false)
 
   const rfInstanceRef = useRef<ReactFlowInstance<any, any> | null>(null)
@@ -754,7 +751,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     currentSaveName.current = result.savedName ?? null
     setFileHandle(result.fileHandle ?? null)
     applySchema(result.schema, undefined, result.positions)
-    setActiveTab('schema')
     const hasPositions = result.positions && Object.keys(result.positions).length > 0
     if (!hasPositions) setTimeout(() => setPendingELK(true), 250)
   }, [applySchema])
@@ -770,17 +766,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         <div className={appStyles.topbarBrand}>
           <span className={appStyles.topbarLogo}>DB Viewer</span>
           <div className={appStyles.topbarBadge}>{schema.tables.length} tables</div>
-        </div>
-        <div className={appStyles.tabRow}>
-          {(['schema', 'data'] as Tab[]).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`${appStyles.tabBtn} ${activeTab === tab ? appStyles.tabBtnActive : ''}`}
-            >
-              {tab === 'schema' ? t.schemaTab : t.dataTab}
-            </button>
-          ))}
         </div>
         <div className={appStyles.topbarRight}>
           <button
@@ -815,7 +800,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
       {/* Content */}
       <div className={appStyles.content}>
-        {activeTab === 'schema' ? (
           <div className={appStyles.schemaView}>
             {splitView ? (
               <>
@@ -1033,16 +1017,6 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
               </ViewModeCtx.Provider>
             </div>
           </div>
-        ) : (
-          <DataViewer
-            schema={schema}
-            lang={lang}
-            onDataChange={(tbl, rows) => {
-              const newData = { ...(schema.data ?? {}), [tbl]: rows }
-              setSchema({ ...schema, data: newData })
-            }}
-          />
-        )}
       </div>
 
       {editorState !== null && (() => {
