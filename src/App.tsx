@@ -189,6 +189,12 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const [viewMode, setViewMode] = useState<ViewMode>('full')
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [groupsOpen, setGroupsOpen] = useState(false)
+  const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null)
+  const [layoutsOpen, setLayoutsOpen] = useState(false)
+  const [layoutMenuId, setLayoutMenuId] = useState<string | null>(null)
+  const layoutsBtnRef = useRef<HTMLDivElement>(null)
+  // live per-layout positions (mirrors masterPositionsRef); folded into schema.layouts on save
+  const layoutPosRef = useRef<Record<string, Record<string, { x: number; y: number }>>>({})
   const [bulkExpand, setBulkExpand] = useState(true)
   const [bulkKey, setBulkKey] = useState(0)
 
@@ -231,7 +237,21 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const [layouting, setLayouting] = useState(false)
   const [pendingELK, setPendingELK] = useState(false)
 
+  const activeLayout = useMemo(
+    () => schema?.layouts?.find(l => l.id === activeLayoutId) ?? null,
+    [schema, activeLayoutId]
+  )
+
   const displayNodes = useMemo(() => {
+    if (activeLayout) {
+      const visible = new Set(activeLayout.tables)
+      const pos = layoutPosRef.current[activeLayout.id] ?? {}
+      return nodes.map(n => ({
+        ...n,
+        hidden: !visible.has(n.id),
+        position: pos[n.id] ?? n.position,
+      }))
+    }
     if (!tagFilter || !schema) {
       return nodes.map(n => ({
         ...n,
@@ -241,13 +261,17 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     }
     const visible = new Set(schema.tables.filter(t => t.tags?.includes(tagFilter)).map(t => t.name))
     return nodes.map(n => ({ ...n, hidden: !visible.has(n.id) }))
-  }, [nodes, tagFilter, schema])
+  }, [nodes, tagFilter, schema, activeLayout])
 
   const displayEdges = useMemo(() => {
+    if (activeLayout) {
+      const visible = new Set(activeLayout.tables)
+      return edges.filter(e => visible.has(e.source) && visible.has(e.target))
+    }
     if (!tagFilter || !schema) return edges
     const visibleNames = new Set(schema.tables.filter(t => t.tags?.includes(tagFilter)).map(t => t.name))
     return edges.filter(e => visibleNames.has(e.source) && visibleNames.has(e.target))
-  }, [edges, tagFilter, schema])
+  }, [edges, tagFilter, schema, activeLayout])
 
   const handleSelectionChange = useCallback(({ nodes: sel }: OnSelectionChangeParams) => {
     setMultiSelectActive(sel.length > 1)
@@ -270,6 +294,21 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [groupsOpen])
+
+  useEffect(() => {
+    if (!layoutsOpen) return
+    const handler = (e: MouseEvent) => {
+      if (!layoutsBtnRef.current?.contains(e.target as globalThis.Node)) { setLayoutsOpen(false); setLayoutMenuId(null) }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [layoutsOpen])
+
+  const selectTagGroup = useCallback((tag: string | null) => {
+    setActiveLayoutId(null)
+    setTagFilter(tag)
+    setGroupsOpen(false)
+  }, [])
 
   useEffect(() => {
     if (!schema) return
@@ -368,15 +407,20 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
           if (h) heights[n.id] = h
         })
       }
-      const { positions } = await computeELKLayout(schema, heights)
-      if (!tagFilter) masterPositionsRef.current = { ...positions }
+      const filter = activeLayout ? new Set(activeLayout.tables) : undefined
+      const { positions } = await computeELKLayout(schema, heights, filter)
+      if (activeLayout) {
+        layoutPosRef.current[activeLayout.id] = { ...(layoutPosRef.current[activeLayout.id] ?? {}), ...positions }
+      } else if (!tagFilter) {
+        masterPositionsRef.current = { ...positions }
+      }
       setNodes(prev => prev.map(n => ({ ...n, position: positions[n.id] ?? n.position })))
     } catch (err) {
       console.error('ELK layout failed:', err)
     } finally {
       setLayouting(false)
     }
-  }, [schema, layouting, setNodes, tagFilter, viewMode])
+  }, [schema, layouting, setNodes, tagFilter, viewMode, activeLayout])
 
   useEffect(() => {
     if (!pendingELK || layouting || nodes.length === 0) return
@@ -390,16 +434,22 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     handleLayout()
   }, [pendingELK, nodes, layouting, handleLayout, tagFilter, schema])
 
+  // persist a dragged position to the active view: layout ref, else master
+  // (tag-filter view is ephemeral — no persistence)
+  const persistPos = useCallback((id: string, pos: { x: number; y: number }) => {
+    if (activeLayoutId) {
+      (layoutPosRef.current[activeLayoutId] ??= {})[id] = pos
+    } else if (!tagFilter) {
+      masterPositionsRef.current[id] = pos
+    }
+  }, [activeLayoutId, tagFilter])
+
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
     onNodesChange(changes)
-    if (!tagFilter) {
-      changes.forEach(c => {
-        if (c.type === 'position' && c.position) {
-          masterPositionsRef.current[c.id] = c.position
-        }
-      })
-    }
-  }, [onNodesChange, tagFilter])
+    changes.forEach(c => {
+      if (c.type === 'position' && c.position) persistPos(c.id, c.position)
+    })
+  }, [onNodesChange, persistPos])
 
   const groupDragOrigins = useRef<Record<string, { x: number; y: number }>>({})
 
@@ -413,10 +463,9 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   }, [highlightCtxValue.highlighted, nodes])
 
   const handleNodeDrag = useCallback((_e: MouseEvent | TouchEvent, node: Node) => {
-    const isMasterMode = !tagFilter
     const isHighlighted = highlightCtxValue.highlighted.has(node.id)
 
-    if (isMasterMode) masterPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y }
+    persistPos(node.id, { x: node.position.x, y: node.position.y })
 
     if (!isHighlighted) return
     const origin = groupDragOrigins.current[node.id]
@@ -429,17 +478,21 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       const o = groupDragOrigins.current[n.id]
       if (!o) return n
       const newPos = { x: o.x + dx, y: o.y + dy }
-      if (isMasterMode) masterPositionsRef.current[n.id] = newPos
+      persistPos(n.id, newPos)
       return { ...n, position: newPos }
     }))
-  }, [highlightCtxValue.highlighted, setNodes, tagFilter])
+  }, [highlightCtxValue.highlighted, setNodes, persistPos])
 
   const handleNodeDragStop = useCallback((_e: MouseEvent | TouchEvent, node: Node) => {
     const current = nodesRef.current
     if (current.length === 0) return
 
+    // in a layout, only its visible tables take part in overlap resolution
+    const visibleSet = activeLayout ? new Set(activeLayout.tables) : null
+
     const rects = new Map<string, Rect>()
     for (const n of current) {
+      if (visibleSet && !visibleSet.has(n.id)) continue
       const m = n.measured as { width?: number; height?: number } | undefined
       rects.set(n.id, { x: n.position.x, y: n.position.y, w: m?.width ?? 280, h: m?.height ?? 120 })
     }
@@ -449,18 +502,72 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     // highlighted group get resolved too
     const resolved = resolveOverlaps(rects, new Set([node.id]))
 
-    if (!tagFilter) {
-      resolved.forEach((p, id) => { masterPositionsRef.current[id] = p })
-    }
+    resolved.forEach((p, id) => persistPos(id, p))
     setNodes(prev => prev.map(n => {
       const p = resolved.get(n.id)
       if (!p || (p.x === n.position.x && p.y === n.position.y)) return n
       return { ...n, position: p }
     }))
-  }, [setNodes, tagFilter])
+  }, [setNodes, persistPos, activeLayout])
+
+  // ── Layouts ────────────────────────────────────────────────────────────
+  const selectLayout = useCallback((id: string | null) => {
+    setActiveLayoutId(id)
+    setTagFilter(null)
+    setHighlightTable(null); setSelectedTables(new Set())
+    setLayoutsOpen(false); setLayoutMenuId(null)
+    setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 60)
+  }, [])
+
+  const createLayoutFromSelection = useCallback(() => {
+    if (!schema) return
+    const tables = [...highlightCtxValue.highlighted]
+    if (tables.length === 0) return
+    const positions: Record<string, { x: number; y: number }> = {}
+    for (const n of nodesRef.current) {
+      if (tables.includes(n.id)) positions[n.id] = { x: n.position.x, y: n.position.y }
+    }
+    const id = crypto.randomUUID()
+    const name = `Layout ${(schema.layouts?.length ?? 0) + 1}`
+    layoutPosRef.current[id] = positions
+    const layouts = [...(schema.layouts ?? []), { id, name, tables, positions }]
+    setSchema({ ...schema, layouts })
+    setSelectedTables(new Set()); setHighlightTable(null)
+    setTagFilter(null); setLayoutsOpen(false)
+    setActiveLayoutId(id)
+    setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 60)
+  }, [schema, highlightCtxValue.highlighted])
+
+  const renameLayout = useCallback(async (id: string) => {
+    if (!schema) return
+    const layout = schema.layouts?.find(l => l.id === id)
+    if (!layout) return
+    const name = await dialog.prompt(
+      lang === 'ru' ? 'Переименовать layout' : 'Rename layout',
+      lang === 'ru' ? 'Новое название' : 'New name',
+      layout.name
+    )
+    if (!name) return
+    setSchema({ ...schema, layouts: schema.layouts!.map(l => l.id === id ? { ...l, name: name.trim() } : l) })
+    setLayoutMenuId(null)
+  }, [schema, dialog, lang])
+
+  const deleteLayout = useCallback((id: string) => {
+    if (!schema) return
+    delete layoutPosRef.current[id]
+    setSchema({ ...schema, layouts: (schema.layouts ?? []).filter(l => l.id !== id) })
+    setLayoutMenuId(null)
+    if (activeLayoutId === id) selectLayout(null)
+  }, [schema, activeLayoutId, selectLayout])
 
   const t = T[lang]
   const handleEdit = useCallback((table: Table) => setEditorState(table.name), [])
+
+  // refresh layouts' stored positions from the live ref before persisting
+  const serializeSchema = useCallback((s: Schema): Schema => {
+    if (!s.layouts?.length) return s
+    return { ...s, layouts: s.layouts.map(l => ({ ...l, positions: layoutPosRef.current[l.id] ?? l.positions })) }
+  }, [])
 
   const applySchema = useCallback((
     s: Schema,
@@ -469,6 +576,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   ) => {
     const schemaToUse = { ...s, tables: s.tables.map(t => t.tags !== undefined ? t : { ...t, tags: [] }) }
     if (initialSavedPos) masterPositionsRef.current = { ...initialSavedPos }
+    // keep live layout positions if this layout is already loaded (in-session edits);
+    // fall back to stored positions for freshly opened schemas
+    layoutPosRef.current = Object.fromEntries(
+      (schemaToUse.layouts ?? []).map(l => [l.id, layoutPosRef.current[l.id] ?? { ...l.positions }])
+    )
     setSchema(schemaToUse)
     saveCurrentSession({ schema: schemaToUse, positions: masterPositionsRef.current, saveId: currentSaveIdRef.current, saveName: currentSaveName.current ?? undefined })
     const { nodes: n, edges: e } = schemaToFlow(schemaToUse, handleEdit, masterPositionsRef.current, currentNodes)
@@ -491,14 +603,15 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   useEffect(() => {
     if (nodes.length === 0 || !schema) return
     const handle = setTimeout(() => {
-      saveCurrentSession({ schema, positions: masterPositionsRef.current, saveId: currentSaveIdRef.current, saveName: currentSaveName.current ?? undefined })
+      saveCurrentSession({ schema: serializeSchema(schema), positions: masterPositionsRef.current, saveId: currentSaveIdRef.current, saveName: currentSaveName.current ?? undefined })
     }, 1000)
     return () => clearTimeout(handle)
-  }, [nodes, schema])
+  }, [nodes, schema, serializeSchema])
 
   const handleSave = useCallback(async () => {
     if (!schema) return
     const posMap = { ...masterPositionsRef.current }
+    const schemaOut = serializeSchema(schema)
 
     if (fileHandle) {
       const isSql  = fileHandle.name.endsWith('.sql')
@@ -514,7 +627,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         return
       }
       try {
-        const content = isSql ? exportSQL(schema) : JSON.stringify(schema, null, 2)
+        const content = isSql ? exportSQL(schemaOut) : JSON.stringify(schemaOut, null, 2)
         await writeToHandle(fileHandle, content)
       } catch (e) {
         console.warn('File write failed, falling back to download', e)
@@ -529,13 +642,13 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
     try {
       if (currentSaveId && currentSaveName.current) {
-        await upsertSave(currentSaveName.current, schema, posMap, currentSaveId)
+        await upsertSave(currentSaveName.current, schemaOut, posMap, currentSaveId)
       } else {
         const fileDefault = fileHandle?.name.replace(/\.[^.]+$/, '')
         const defaultName = fileDefault ?? schema.tables.map(tb => tb.name).slice(0, 2).join(', ') + (schema.tables.length > 2 ? '…' : '')
         const name = await dialog.prompt(lang === 'ru' ? 'Название сохранения' : 'Save name', t.saveNamePrompt, defaultName)
         if (!name) return
-        const saved = await upsertSave(name, schema, posMap)
+        const saved = await upsertSave(name, schemaOut, posMap)
         setCurrentSaveId(saved.id)
         currentSaveIdRef.current = saved.id
         currentSaveName.current = name
@@ -551,7 +664,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setSaveFlash(true)
     setTimeout(() => setSaveFlash(false), 1500)
     dialog.alert(lang === 'ru' ? 'Сохранение' : 'Saved', lang === 'ru' ? 'Изменения успешно сохранены!' : 'All changes have been successfully saved.')
-  }, [schema, currentSaveId, fileHandle, t, dialog, lang])
+  }, [schema, currentSaveId, fileHandle, t, dialog, lang, serializeSchema])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -566,7 +679,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined)
     currentSaveIdRef.current = undefined
     currentSaveName.current = null
-    setFileHandle(null); setTagFilter(null); setEditorState(null)
+    setFileHandle(null); setTagFilter(null); setActiveLayoutId(null); setEditorState(null)
   }, [])
 
   const handleEditorSave = useCallback((updated: Table, originalName: string | null) => {
@@ -618,7 +731,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   }, [schema, applySchema, t, highlightTable, dialog, lang])
 
   const handleOpen = useCallback((result: OpenResult) => {
-    setHighlightTable(null); setSelectedTables(new Set()); setTagFilter(null)
+    setHighlightTable(null); setSelectedTables(new Set()); setTagFilter(null); setActiveLayoutId(null)
     setCurrentSaveId(result.savedId)
     currentSaveIdRef.current = result.savedId
     currentSaveName.current = result.savedName ?? null
@@ -738,7 +851,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                   {groupsOpen && (
                     <div className={appStyles.groupsDropdown}>
                       <button
-                        onClick={() => { setTagFilter(null); setGroupsOpen(false) }}
+                        onClick={() => selectTagGroup(null)}
                         className={`${appStyles.groupsAllBtn} ${tagFilter === null ? appStyles.groupsAllBtnActive : ''}`}
                       >
                         <span>{lang === 'ru' ? 'Все таблицы' : 'All groups'}</span>
@@ -748,7 +861,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                       {allTags.map(({ tag, count }) => (
                         <button
                           key={tag}
-                          onClick={() => { setTagFilter(tag); setGroupsOpen(false) }}
+                          onClick={() => selectTagGroup(tag)}
                           className={`${appStyles.groupsTagBtn} ${tagFilter === tag ? appStyles.groupsTagBtnActive : ''}`}
                         >
                           <div className={appStyles.groupsTagLeft}>
@@ -775,16 +888,78 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                   </select>
                 </div>
 
-                {/* Layout */}
+                {/* Layouts */}
+                <div className={appStyles.groupsPill} ref={layoutsBtnRef}>
+                  <button
+                    onClick={() => setLayoutsOpen(o => !o)}
+                    className={`${appStyles.groupsBtn} ${activeLayout ? appStyles.groupsBtnFiltered : ''}`}
+                  >
+                    <span className={appStyles.toolBtnIcon}>▦</span>
+                    <span className={appStyles.toolBtnLabel}>
+                      {activeLayout ? activeLayout.name : (lang === 'ru' ? 'Слои' : 'Layouts')}
+                    </span>
+                    <span className={appStyles.groupsChevron}>▼</span>
+                  </button>
+                  {layoutsOpen && (
+                    <div className={appStyles.groupsDropdown}>
+                      <button
+                        onClick={() => selectLayout(null)}
+                        className={`${appStyles.groupsAllBtn} ${activeLayoutId === null ? appStyles.groupsAllBtnActive : ''}`}
+                      >
+                        <span>{lang === 'ru' ? 'Все таблицы' : 'All tables'}</span>
+                        {activeLayoutId === null && <span>✓</span>}
+                      </button>
+                      <div className={appStyles.groupsDivider} />
+                      {(schema.layouts ?? []).map(l => (
+                        <div key={l.id} className={appStyles.layoutRow}>
+                          <button
+                            onClick={() => selectLayout(l.id)}
+                            className={`${appStyles.groupsTagBtn} ${activeLayoutId === l.id ? appStyles.groupsTagBtnActive : ''}`}
+                          >
+                            <div className={appStyles.groupsTagLeft}>
+                              <span>{l.name}</span>
+                            </div>
+                            <span className={appStyles.groupsTagCount}>{l.tables.length}</span>
+                          </button>
+                          <button
+                            className={appStyles.layoutMenuBtn}
+                            onClick={e => { e.stopPropagation(); setLayoutMenuId(m => m === l.id ? null : l.id) }}
+                            title={lang === 'ru' ? 'Настройки слоя' : 'Layout settings'}
+                          >⋯</button>
+                          {layoutMenuId === l.id && (
+                            <div className={appStyles.layoutMenu}>
+                              <button className={appStyles.layoutMenuItem} onClick={() => renameLayout(l.id)}>
+                                {lang === 'ru' ? 'Переименовать' : 'Rename'}
+                              </button>
+                              <button className={`${appStyles.layoutMenuItem} ${appStyles.layoutMenuItemDanger}`} onClick={() => deleteLayout(l.id)}>
+                                {lang === 'ru' ? 'Удалить' : 'Delete'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {selectedTables.size > 0 && (
+                        <>
+                          <div className={appStyles.groupsDivider} />
+                          <button className={appStyles.layoutAddBtn} onClick={createLayoutFromSelection}>
+                            + {lang === 'ru' ? 'Новый слой из выбранных' : 'New layout from selection'} ({highlightCtxValue.highlighted.size})
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Organize (ELK) */}
                 <div className={appStyles.toolPill}>
                   <button
                     onClick={handleLayout}
                     disabled={layouting}
                     className={`${appStyles.toolBtn} ${layouting ? appStyles.toolBtnDisabled : ''}`}
-                    title="Re-run auto layout"
+                    title="Auto-arrange tables (ELK)"
                   >
                     <span className={appStyles.toolBtnIcon} style={layouting ? { display: 'inline-block', transform: 'rotate(90deg)' } : undefined}>⟳</span>
-                    <span className={appStyles.toolBtnLabel}>{layouting ? '...' : 'Layout'}</span>
+                    <span className={appStyles.toolBtnLabel}>{layouting ? '...' : 'Organize'}</span>
                   </button>
                 </div>
 

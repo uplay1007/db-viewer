@@ -18,7 +18,15 @@ export interface Table {
   tags?: string[]
 }
 
+export interface Layout {
+  id: string
+  name: string
+  tables: string[]                                    // table names shown in this layout
+  positions: Record<string, { x: number; y: number }> // per-layout table positions
+}
+
 export interface Schema {
   tables: Table[]
   data?: Record<string, Record<string, unknown>[]>
+  layouts?: Layout[]
 }

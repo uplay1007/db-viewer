@@ -338,6 +338,93 @@
   transition: background 0.15s;
 }
 
+.layoutRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.layoutRow .groupsTagBtn {
+  flex: 1;
+  min-width: 0;
+}
+
+.layoutMenuBtn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  border: none;
+  background: none;
+  color: #6b7280;
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.layoutMenuBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+
+.layoutMenu {
+  position: absolute;
+  top: 100%;
+  right: 10px;
+  margin-top: 2px;
+  width: 160px;
+  background: #22252f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  padding: 6px 0;
+  z-index: 60;
+}
+
+.layoutMenuItem {
+  width: 100%;
+  padding: 9px 16px;
+  text-align: left;
+  font-size: 13px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #d1d5db;
+  transition: background 0.15s;
+}
+
+.layoutMenuItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.layoutMenuItemDanger {
+  color: #f87171;
+}
+
+.layoutMenuItemDanger:hover {
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.layoutAddBtn {
+  width: 100%;
+  padding: 10px 20px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #818cf8;
+  transition: background 0.15s;
+}
+
+.layoutAddBtn:hover {
+  background: rgba(99, 102, 241, 0.12);
+}
+
 .groupsAllBtn:hover {
   background: rgba(255, 255, 255, 0.05);
 }
