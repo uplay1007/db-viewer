@@ -435,6 +435,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         masterPositionsRef.current = { ...positions }
       }
       setNodes(prev => prev.map(n => ({ ...n, position: positions[n.id] ?? n.position })))
+      // re-frame the camera on the freshly arranged tables
+      setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 60)
     } catch (err) {
       console.error('ELK layout failed:', err)
     } finally {
