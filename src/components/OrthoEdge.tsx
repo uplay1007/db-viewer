@@ -5,6 +5,7 @@ import {
   type EdgeProps,
 } from '@xyflow/react'
 import { HighlightCtx } from '../contexts/highlight'
+import { EdgeHoverCtx } from '../contexts/edgeHover'
 import styles from './OrthoEdge.module.css'
 
 export interface OrthoEdgeData extends Record<string, unknown> {
@@ -13,6 +14,8 @@ export interface OrthoEdgeData extends Record<string, unknown> {
   relType?: '1:1' | '1:N' | 'N:M'
   sourceColor?: string
   targetColor?: string
+  sourceColumn?: string
+  targetColumn?: string
 }
 
 const LABEL_OFF = 24
@@ -30,8 +33,23 @@ export function OrthoEdge({
   data,
 }: EdgeProps) {
   const [hovered, setHovered] = useState(false)
-  const { label, color, relType, sourceColor, targetColor } = (data ?? {}) as OrthoEdgeData
+  const { label, color, relType, sourceColor, targetColor, sourceColumn, targetColumn } = (data ?? {}) as OrthoEdgeData
   const hl = useContext(HighlightCtx)
+  const edgeHover = useContext(EdgeHoverCtx)
+
+  const enterHover = () => {
+    setHovered(true)
+    if (sourceColumn && targetColumn) {
+      edgeHover.setHover({
+        source: { table: source, column: sourceColumn },
+        target: { table: target, column: targetColumn },
+      })
+    }
+  }
+  const leaveHover = () => {
+    setHovered(false)
+    edgeHover.setHover(null)
+  }
 
   const edgeDimmed      = hl.active && source !== hl.focusTable && target !== hl.focusTable
   const edgeHighlighted = hl.active && (source === hl.focusTable || target === hl.focusTable)
@@ -67,8 +85,8 @@ export function OrthoEdge({
         fill="none"
         stroke="transparent"
         strokeWidth={16}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={enterHover}
+        onMouseLeave={leaveHover}
         style={{ cursor: 'default' }}
       />
       {edgeHighlighted && (

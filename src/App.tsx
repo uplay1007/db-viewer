@@ -24,6 +24,7 @@ import {
 } from './utils/storage'
 import { TableNode, type TableNodeData, MultiSelectCtx } from './components/TableNode'
 import { HighlightCtx, type HighlightCtxValue } from './contexts/highlight'
+import { EdgeHoverCtx, type EdgeEndpoint } from './contexts/edgeHover'
 import { ViewModeCtx, type ViewMode, type ViewModeCtxValue } from './contexts/viewMode'
 import { OrthoEdge, type OrthoEdgeData } from './components/OrthoEdge'
 import { computeELKLayout } from './services/layoutService'
@@ -111,6 +112,8 @@ function schemaToFlow(
           relType: getRelType(table, col),
           sourceColor: tagColor(table.tags),
           targetColor: tagColor(targetTable.tags),
+          sourceColumn: col.name,
+          targetColumn: col.foreignKey.column,
         } satisfies OrthoEdgeData,
       })
     }
@@ -317,6 +320,13 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       active: true, highlighted: set, focusTable: highlightTable, onHighlight: setHighlightTable, onClear: () => setHighlightTable(null),
     }
   }, [highlightTable, schema])
+
+  const [edgeHover, setEdgeHover] = useState<{ source: EdgeEndpoint; target: EdgeEndpoint } | null>(null)
+  const edgeHoverCtxValue = useMemo(() => ({
+    source: edgeHover?.source ?? null,
+    target: edgeHover?.target ?? null,
+    setHover: setEdgeHover,
+  }), [edgeHover])
 
   const handleLayout = useCallback(async () => {
     if (!schema || layouting) return
@@ -760,6 +770,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
               <ViewModeCtx.Provider value={{ mode: viewMode, bulkExpand, bulkKey }}>
                 <HighlightCtx.Provider value={highlightCtxValue}>
+                 <EdgeHoverCtx.Provider value={edgeHoverCtxValue}>
                   <MultiSelectCtx.Provider value={multiSelectActive}>
                     <ReactFlow
                       nodes={displayNodes}
@@ -794,6 +805,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                       />
                     </ReactFlow>
                   </MultiSelectCtx.Provider>
+                 </EdgeHoverCtx.Provider>
                 </HighlightCtx.Provider>
               </ViewModeCtx.Provider>
             </div>

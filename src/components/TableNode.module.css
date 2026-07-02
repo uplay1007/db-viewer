@@ -127,6 +127,15 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.columnRowLinked {
+  background: rgba(245, 158, 11, 0.18);
+  box-shadow: inset 2px 0 0 #f59e0b;
+}
+
+.columnRowLinked:hover {
+  background: rgba(245, 158, 11, 0.24);
+}
+
 .colName {
   flex: 1;
   font-size: 12px;

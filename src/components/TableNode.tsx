@@ -3,6 +3,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { tagColor } from '../utils/colors'
 import { MultiSelectCtx } from './TableNode.multiselect'
 import { HighlightCtx } from '../contexts/highlight'
+import { EdgeHoverCtx } from '../contexts/edgeHover'
 import { ViewModeCtx } from '../contexts/viewMode'
 import type { Table, Column } from '../types/schema'
 import styles from './TableNode.module.css'
@@ -37,9 +38,9 @@ function Badge({ label, color }: { label: string; color: string }) {
   )
 }
 
-function ColumnRow({ col, accent }: { col: Column; accent: string }) {
+function ColumnRow({ col, accent, linked }: { col: Column; accent: string; linked: boolean }) {
   return (
-    <div className={styles.columnRow}>
+    <div className={`${styles.columnRow} ${linked ? styles.columnRowLinked : ''}`}>
       <span className={styles.colName}>{col.name}</span>
       <span className={styles.colType}>{col.type}</span>
       <div className={styles.badges}>
@@ -57,6 +58,7 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
   const [expanded, setExpanded] = useState(true)
   const multiSelectActive = useContext(MultiSelectCtx)
   const hl = useContext(HighlightCtx)
+  const edgeHover = useContext(EdgeHoverCtx)
   const { mode: viewMode, bulkKey, bulkExpand } = useContext(ViewModeCtx)
   const accent = tagColor(table.tags)
   const lastAppliedKey = useRef(0)
@@ -71,6 +73,12 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
   const isHighlighted = hl.active && hl.highlighted.has(table.name)
   const isDimmed = hl.active && !hl.highlighted.has(table.name)
   const isMultiSelected = multiSelectActive && selected
+
+  // column linked by the currently hovered FK edge (this table's endpoint)
+  const linkedCol =
+    edgeHover.source?.table === table.name ? edgeHover.source.column
+    : edgeHover.target?.table === table.name ? edgeHover.target.column
+    : null
 
   const showColumns = isMultiSelected ? false : expanded
 
@@ -142,7 +150,7 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
             ...visibleColumns.filter(c => c.foreignKey && !c.primaryKey),
             ...visibleColumns.filter(c => !c.primaryKey && !c.foreignKey),
           ].map(col => (
-            <ColumnRow key={col.name} col={col} accent={accent} />
+            <ColumnRow key={col.name} col={col} accent={accent} linked={col.name === linkedCol} />
           ))}
         </div>
       )}
