@@ -227,6 +227,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   const [multiSelectActive, setMultiSelectActive] = useState(false)
   const [highlightTable, setHighlightTable] = useState<string | null>(null)
+  const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set())
   const [layouting, setLayouting] = useState(false)
   const [pendingELK, setPendingELK] = useState(false)
 
@@ -304,9 +305,39 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     })
   }, [tagFilter, schema, setNodes, viewMode])
 
+  const clearHighlight = useCallback(() => {
+    setHighlightTable(null)
+    setSelectedTables(new Set())
+  }, [])
+
+  // Click a table header. Shift builds a manual selection group (seeded from
+  // the current focus + its FK neighbors are dimmed); plain click focuses.
+  const handleTableClick = useCallback((name: string, shiftKey: boolean) => {
+    if (shiftKey) {
+      setSelectedTables(prev => {
+        if (prev.size === 0) {
+          return highlightTable ? new Set([highlightTable, name]) : new Set([name])
+        }
+        const next = new Set(prev)
+        if (next.has(name)) next.delete(name)
+        else next.add(name)
+        return next
+      })
+    } else {
+      setSelectedTables(new Set())
+      setHighlightTable(prev => (prev === name ? null : name))
+    }
+  }, [highlightTable])
+
   const highlightCtxValue = useMemo((): HighlightCtxValue => {
+    // manual selection mode takes precedence over neighbor highlight
+    if (selectedTables.size > 0) {
+      const lit = new Set(selectedTables)
+      if (highlightTable) lit.add(highlightTable)
+      return { active: true, highlighted: lit, focusTable: highlightTable, onHighlight: handleTableClick }
+    }
     if (!highlightTable || !schema) {
-      return { active: false, highlighted: new Set(), focusTable: null, onHighlight: setHighlightTable, onClear: () => setHighlightTable(null) }
+      return { active: false, highlighted: new Set(), focusTable: null, onHighlight: handleTableClick }
     }
     const set = new Set<string>([highlightTable])
     for (const t of schema.tables) {
@@ -316,10 +347,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         if (col.foreignKey.table === highlightTable) set.add(t.name)
       }
     }
-    return {
-      active: true, highlighted: set, focusTable: highlightTable, onHighlight: setHighlightTable, onClear: () => setHighlightTable(null),
-    }
-  }, [highlightTable, schema])
+    return { active: true, highlighted: set, focusTable: highlightTable, onHighlight: handleTableClick }
+  }, [highlightTable, selectedTables, schema, handleTableClick, clearHighlight])
 
   const [edgeHover, setEdgeHover] = useState<{ source: EdgeEndpoint; target: EdgeEndpoint } | null>(null)
   const edgeHoverCtxValue = useMemo(() => ({
@@ -527,11 +556,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSave() }
-      if (e.key === 'Escape') setHighlightTable(null)
+      if (e.key === 'Escape') clearHighlight()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleSave])
+  }, [handleSave, clearHighlight])
 
   const handleExit = useCallback(() => {
     clearCurrentSession(); setSchema(null); setCurrentSaveId(undefined)
@@ -577,6 +606,10 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     const ok = await dialog.confirm(lang === 'ru' ? 'Удаление таблицы' : 'Delete table', t.deleteConfirm(tableName))
     if (!ok) return
     if (highlightTable === tableName) setHighlightTable(null)
+    setSelectedTables(prev => {
+      if (!prev.has(tableName)) return prev
+      const next = new Set(prev); next.delete(tableName); return next
+    })
     const newTables = schema.tables.filter(tb => tb.name !== tableName).map(tb => ({
       ...tb,
       columns: tb.columns.map(c => c.foreignKey?.table === tableName ? { ...c, foreignKey: undefined } : c)
@@ -585,7 +618,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   }, [schema, applySchema, t, highlightTable, dialog, lang])
 
   const handleOpen = useCallback((result: OpenResult) => {
-    setHighlightTable(null); setTagFilter(null)
+    setHighlightTable(null); setSelectedTables(new Set()); setTagFilter(null)
     setCurrentSaveId(result.savedId)
     currentSaveIdRef.current = result.savedId
     currentSaveName.current = result.savedName ?? null
@@ -781,6 +814,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                       onNodeDrag={handleNodeDrag}
                       onNodeDragStop={handleNodeDragStop}
                       onSelectionChange={handleSelectionChange}
+                      onPaneClick={clearHighlight}
                       nodeTypes={NODE_TYPES}
                       edgeTypes={EDGE_TYPES}
                       fitView
@@ -789,6 +823,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                       selectionMode={canvasMode === 'select' ? SelectionMode.Partial : SelectionMode.Full}
                       panOnDrag={canvasMode === 'pan'}
                       selectionOnDrag={canvasMode === 'select'}
+                      multiSelectionKeyCode={canvasMode === 'select' ? 'Shift' : null}
                       panOnScroll={true}
                       onInit={instance => { rfInstanceRef.current = instance }}
                     >

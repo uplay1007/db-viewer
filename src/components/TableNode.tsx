@@ -72,6 +72,7 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
 
   const isHighlighted = hl.active && hl.highlighted.has(table.name)
   const isDimmed = hl.active && !hl.highlighted.has(table.name)
+  const isFocus = hl.active && hl.focusTable === table.name
   const isMultiSelected = multiSelectActive && selected
 
   // column linked by the currently hovered FK edge (this table's endpoint)
@@ -86,18 +87,14 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
     ? table.columns.filter(c => c.primaryKey || c.foreignKey)
     : table.columns
 
-  const handleHeaderClick = () => {
-    if (hl.active) {
-      if (isHighlighted) hl.onClear()
-      else hl.onHighlight(table.name)
-    } else {
-      hl.onHighlight(table.name)
-    }
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    hl.onHighlight(table.name, e.shiftKey)
   }
 
   const nodeClass = [
     styles.node,
     isHighlighted ? styles.nodeHighlighted : '',
+    isFocus ? styles.nodeFocus : '',
     isMultiSelected ? styles.nodeMultiSelected : '',
     isDimmed ? styles.nodeDimmed : '',
   ].filter(Boolean).join(' ')

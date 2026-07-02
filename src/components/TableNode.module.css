@@ -15,6 +15,12 @@
   box-shadow: 0 0 0 3px var(--accent-glow, rgba(99, 102, 241, 0.33)), 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
+.nodeFocus {
+  /* the main / focused table — stronger ring than plain highlight */
+  border: 2px solid var(--accent, #6366f1);
+  box-shadow: 0 0 0 4px var(--accent, #6366f1), 0 0 24px var(--accent-glow, rgba(99, 102, 241, 0.5)), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
 .nodeMultiSelected {
   border: 2px solid var(--accent, #6366f1);
   box-shadow: 0 0 0 2px var(--accent-glow2, rgba(99, 102, 241, 0.27));
@@ -22,7 +28,7 @@
 
 .nodeDimmed {
   opacity: 0.15;
-  pointer-events: none;
+  /* stays interactive so dimmed tables can be shift-clicked into the selection */
 }
 
 .header {
