@@ -334,10 +334,10 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     if (selectedTables.size > 0) {
       const lit = new Set(selectedTables)
       if (highlightTable) lit.add(highlightTable)
-      return { active: true, highlighted: lit, focusTable: highlightTable, onHighlight: handleTableClick }
+      return { active: true, highlighted: lit, focusTable: highlightTable, groupMode: true, onHighlight: handleTableClick }
     }
     if (!highlightTable || !schema) {
-      return { active: false, highlighted: new Set(), focusTable: null, onHighlight: handleTableClick }
+      return { active: false, highlighted: new Set(), focusTable: null, groupMode: false, onHighlight: handleTableClick }
     }
     const set = new Set<string>([highlightTable])
     for (const t of schema.tables) {
@@ -347,7 +347,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         if (col.foreignKey.table === highlightTable) set.add(t.name)
       }
     }
-    return { active: true, highlighted: set, focusTable: highlightTable, onHighlight: handleTableClick }
+    return { active: true, highlighted: set, focusTable: highlightTable, groupMode: false, onHighlight: handleTableClick }
   }, [highlightTable, selectedTables, schema, handleTableClick, clearHighlight])
 
   const [edgeHover, setEdgeHover] = useState<{ source: EdgeEndpoint; target: EdgeEndpoint } | null>(null)

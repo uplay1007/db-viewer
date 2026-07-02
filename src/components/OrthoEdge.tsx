@@ -51,11 +51,11 @@ export function OrthoEdge({
     edgeHover.setHover(null)
   }
 
-  // highlight an edge only when it touches the focus AND both ends are lit —
-  // so in selection mode, edges from the main to non-selected tables stay dim
-  const edgeHighlighted = hl.active
-    && (source === hl.focusTable || target === hl.focusTable)
-    && hl.highlighted.has(source) && hl.highlighted.has(target)
+  const bothLit = hl.highlighted.has(source) && hl.highlighted.has(target)
+  const touchesFocus = source === hl.focusTable || target === hl.focusTable
+  // group mode: any edge between two selected tables lights up.
+  // normal mode: only edges touching the focused table (its direct FKs).
+  const edgeHighlighted = hl.active && (hl.groupMode ? bothLit : (touchesFocus && bothLit))
   const edgeDimmed = hl.active && !edgeHighlighted
 
   const activeColor = edgeHighlighted
