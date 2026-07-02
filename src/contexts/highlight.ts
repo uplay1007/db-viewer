@@ -5,7 +5,7 @@ export interface HighlightCtxValue {
   highlighted: Set<string>   // lit set: focus + FK neighbors, or the manual selection
   focusTable: string | null  // the main table that was clicked
   groupMode: boolean         // true when a manual shift-selection is active
-  onHighlight: (name: string, shiftKey: boolean) => void
+  onHighlight: (name: string, mods: { shift: boolean; alt: boolean }) => void
 }
 
 export const HighlightCtx = createContext<HighlightCtxValue>({

@@ -88,7 +88,7 @@ export const TableNode = memo(({ data, selected }: NodeProps) => {
     : table.columns
 
   const handleHeaderClick = (e: React.MouseEvent) => {
-    hl.onHighlight(table.name, e.shiftKey)
+    hl.onHighlight(table.name, { shift: e.shiftKey, alt: e.altKey })
   }
 
   const nodeClass = [

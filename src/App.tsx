@@ -65,6 +65,27 @@ function getRelType(table: Table, col: Column): '1:1' | '1:N' | 'N:M' {
   return '1:N'
 }
 
+// Tables whose entire FK-neighborhood (both directions) is just `focus` —
+// i.e. connected only to the focused table and to nothing else.
+function exclusiveNeighbors(tables: Table[], focus: string): string[] {
+  const result: string[] = []
+  for (const t of tables) {
+    if (t.name === focus) continue
+    const partners = new Set<string>()
+    for (const col of t.columns) {
+      if (col.foreignKey && col.foreignKey.table !== t.name) partners.add(col.foreignKey.table)
+    }
+    for (const other of tables) {
+      if (other.name === t.name) continue
+      for (const col of other.columns) {
+        if (col.foreignKey?.table === t.name) partners.add(other.name)
+      }
+    }
+    if (partners.has(focus) && [...partners].every(p => p === focus)) result.push(t.name)
+  }
+  return result
+}
+
 function schemaToFlow(
   schema: Schema,
   onEdit: (t: Table) => void,
@@ -371,8 +392,15 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
 
   // Click a table header. Shift builds a manual selection group (seeded from
   // the current focus + its FK neighbors are dimmed); plain click focuses.
-  const handleTableClick = useCallback((name: string, shiftKey: boolean) => {
-    if (shiftKey) {
+  const handleTableClick = useCallback((name: string, mods: { shift: boolean; alt: boolean }) => {
+    // Alt/Option: select the table + tables connected ONLY to it (exclusive satellites)
+    if (mods.alt) {
+      if (!schema) return
+      setHighlightTable(name)
+      setSelectedTables(new Set([name, ...exclusiveNeighbors(schema.tables, name)]))
+      return
+    }
+    if (mods.shift) {
       setSelectedTables(prev => {
         if (prev.size === 0) {
           return highlightTable ? new Set([highlightTable, name]) : new Set([name])
@@ -386,7 +414,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       setSelectedTables(new Set())
       setHighlightTable(prev => (prev === name ? null : name))
     }
-  }, [highlightTable])
+  }, [highlightTable, schema])
 
   const highlightCtxValue = useMemo((): HighlightCtxValue => {
     // manual selection mode takes precedence over neighbor highlight
