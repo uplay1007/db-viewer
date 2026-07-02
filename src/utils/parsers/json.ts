@@ -1,8 +1,14 @@
 import type { Schema } from '../../types/schema'
+import { isStructuredSchema, structuredToSchema } from '../structuredJSON'
 
 export function parseJSON(text: string): Schema {
   const raw = JSON.parse(text)
-  if (!Array.isArray(raw.tables)) throw new Error('Expected { tables: [] }')
+
+  // public format: { Tables, Relations, Layouts, Groups }
+  if (isStructuredSchema(raw)) return structuredToSchema(raw)
+
+  // legacy internal format: { tables: [...] }
+  if (!Array.isArray(raw.tables)) throw new Error('Expected { Tables: [] } or { tables: [] }')
   for (const t of raw.tables) {
     if (typeof t.name !== 'string' || !t.name) throw new Error(`Table missing name`)
     if (!Array.isArray(t.columns)) throw new Error(`Table "${t.name}" missing columns array`)

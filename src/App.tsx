@@ -35,6 +35,7 @@ import { SchemaEditor } from './components/SchemaEditor'
 import { UploadZone, type OpenResult } from './components/UploadZone'
 import { writeToHandle } from './utils/fileAccess'
 import { exportSQL } from './utils/parsers/sql'
+import { schemaToStructured } from './utils/structuredJSON'
 import { T, type Lang } from './i18n'
 import { DialogProvider, useDialog } from './contexts/DialogContext'
 import { useAuth } from './contexts/AuthContext'
@@ -149,7 +150,7 @@ function schemaToFlow(
 type EditorState = null | 'new' | string
 
 function exportJSON(schema: Schema) {
-  const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' })
+  const blob = new Blob([JSON.stringify(schemaToStructured(schema), null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url; a.download = 'schema.json'; a.click()
@@ -661,7 +662,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
       const isSql  = fileHandle.name.endsWith('.sql')
       const isJson = fileHandle.name.endsWith('.json')
       if (!isSql && !isJson) {
-        exportJSON(schema)
+        exportJSON(schemaOut)
         dialog.alert(
           lang === 'ru' ? 'Формат файла' : 'File format',
           lang === 'ru'
@@ -671,11 +672,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         return
       }
       try {
-        const content = isSql ? exportSQL(schemaOut) : JSON.stringify(schemaOut, null, 2)
+        const content = isSql ? exportSQL(schemaOut) : JSON.stringify(schemaToStructured(schemaOut), null, 2)
         await writeToHandle(fileHandle, content)
       } catch (e) {
         console.warn('File write failed, falling back to download', e)
-        exportJSON(schema)
+        exportJSON(schemaOut)
         dialog.alert(
           lang === 'ru' ? 'Ошибка записи' : 'Write failed',
           lang === 'ru' ? 'Не удалось сохранить в файл. Схема скачана как копия.' : 'Could not write to file. Schema downloaded as a copy instead.'
@@ -799,7 +800,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
         </div>
         <div className={appStyles.topbarRight}>
           <button
-            onClick={() => { exportJSON(schema); dialog.alert(lang === 'ru' ? 'Экспорт JSON' : 'JSON Export', lang === 'ru' ? 'Файл схемы успешно скачан.' : 'The schema file has been successfully downloaded.') }}
+            onClick={() => { exportJSON(serializeSchema(schema)); dialog.alert(lang === 'ru' ? 'Экспорт JSON' : 'JSON Export', lang === 'ru' ? 'Файл схемы успешно скачан.' : 'The schema file has been successfully downloaded.') }}
             className={appStyles.exportBtn}
           >
             ↓ JSON
