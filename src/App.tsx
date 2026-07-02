@@ -202,12 +202,25 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   const layoutPosRef = useRef<Record<string, Record<string, { x: number; y: number }>>>({})
   const [bulkExpand, setBulkExpand] = useState(true)
   const [bulkKey, setBulkKey] = useState(0)
+  // view mode for the non-layout view (All tables + tag groups)
+  const [baseViewMode, setBaseViewMode] = useState<ViewMode>('full')
 
-  const handleViewMode = useCallback((mode: ViewMode) => {
+  // apply a detail level to the canvas (selector + bulk expand/collapse broadcast)
+  const applyViewMode = useCallback((mode: ViewMode) => {
     setViewMode(mode)
     setBulkExpand(mode !== 'collapsed')
     setBulkKey(k => k + 1)
   }, [])
+
+  // change the mode from the selector — persist it to the active view
+  const handleViewMode = useCallback((mode: ViewMode) => {
+    applyViewMode(mode)
+    if (activeLayoutId) {
+      setSchema(s => s ? { ...s, layouts: (s.layouts ?? []).map(l => l.id === activeLayoutId ? { ...l, viewMode: mode } : l) } : s)
+    } else {
+      setBaseViewMode(mode)
+    }
+  }, [applyViewMode, activeLayoutId])
 
   const [splitView, setSplitView] = useState(false)
   const [editorWidth, setEditorWidth] = useState(380)
@@ -313,7 +326,8 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setActiveLayoutId(null)
     setTagFilter(tag)
     setGroupsOpen(false)
-  }, [])
+    applyViewMode(baseViewMode)
+  }, [applyViewMode, baseViewMode])
 
   const prevTagFilterRef = useRef<string | null>(tagFilter)
   useEffect(() => {
@@ -525,8 +539,11 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     setTagFilter(null)
     setHighlightTable(null); setSelectedTables(new Set())
     setLayoutsOpen(false)
+    // restore this view's saved detail level
+    const mode = id ? (schema?.layouts?.find(l => l.id === id)?.viewMode ?? 'full') : baseViewMode
+    applyViewMode(mode)
     setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 60)
-  }, [])
+  }, [schema, baseViewMode, applyViewMode])
 
   const createLayoutFromSelection = useCallback(() => {
     if (!schema) return
@@ -539,13 +556,13 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
     const id = crypto.randomUUID()
     const name = `Layout ${(schema.layouts?.length ?? 0) + 1}`
     layoutPosRef.current[id] = positions
-    const layouts = [...(schema.layouts ?? []), { id, name, tables, positions }]
+    const layouts = [...(schema.layouts ?? []), { id, name, tables, positions, viewMode }]
     setSchema({ ...schema, layouts })
     setSelectedTables(new Set()); setHighlightTable(null)
     setTagFilter(null); setLayoutsOpen(false)
     setActiveLayoutId(id)
     setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.2, duration: 400 }), 60)
-  }, [schema, highlightCtxValue.highlighted])
+  }, [schema, highlightCtxValue.highlighted, viewMode])
 
   const renameLayout = useCallback((id: string, name: string) => {
     if (!schema || !name.trim()) return

@@ -23,6 +23,7 @@ export interface Layout {
   name: string
   tables: string[]                                    // table names shown in this layout
   positions: Record<string, { x: number; y: number }> // per-layout table positions
+  viewMode?: 'full' | 'compact' | 'collapsed'          // per-layout detail level
 }
 
 export interface Schema {
