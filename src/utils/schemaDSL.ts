@@ -2,6 +2,32 @@ import type { Schema, Table, Column } from '../types/schema'
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/
 
+// recognised column types (base name, before any length like varchar(255))
+const KNOWN_TYPES = new Set([
+  // integers
+  'int', 'integer', 'int2', 'int4', 'int8', 'smallint', 'bigint', 'tinyint', 'mediumint',
+  'serial', 'bigserial', 'smallserial', 'serial2', 'serial4', 'serial8',
+  // numeric
+  'decimal', 'numeric', 'real', 'double', 'float', 'float4', 'float8', 'money', 'number',
+  // string
+  'varchar', 'char', 'character', 'varying', 'text', 'tinytext', 'mediumtext', 'longtext',
+  'string', 'nvarchar', 'nchar', 'citext',
+  // boolean
+  'boolean', 'bool', 'bit',
+  // date / time
+  'date', 'datetime', 'timestamp', 'timestamptz', 'time', 'timetz', 'year', 'interval',
+  // uuid / json / xml
+  'uuid', 'json', 'jsonb', 'xml',
+  // binary
+  'binary', 'varbinary', 'blob', 'tinyblob', 'mediumblob', 'longblob', 'bytea', 'clob',
+  // misc
+  'enum', 'set', 'array', 'inet', 'cidr', 'macaddr', 'point', 'geometry', 'geography', 'hstore',
+])
+
+function isKnownType(type: string): boolean {
+  return KNOWN_TYPES.has(type.replace(/\(.*$/, '').toLowerCase())
+}
+
 export interface DSLDiagnostic { line: number; message: string }
 export interface DSLResult { schema: Schema; diagnostics: DSLDiagnostic[] }
 
@@ -74,6 +100,7 @@ export function dslToSchema(text: string, prevSchema?: Schema): DSLResult {
       const colType = tokens[1]
       if (!IDENT.test(colName)) diagnostics.push({ line: lineNo, message: `Invalid column name "${colName}" — latin letters, digits and _ only` })
       else if (!colType) diagnostics.push({ line: lineNo, message: `Column "${colName}" is missing a type` })
+      else if (!isKnownType(colType)) diagnostics.push({ line: lineNo, message: `Unknown type "${colType}" for column "${colName}"` })
       if (cur && curCols) {
         if (curCols.has(colName)) diagnostics.push({ line: lineNo, message: `Duplicate column "${colName}" in "${cur.name}"` })
         curCols.add(colName)
