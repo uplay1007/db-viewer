@@ -114,6 +114,28 @@ export function parseSQL(text: string): Schema {
   return { tables }
 }
 
+// map non-Postgres type names (from MySQL / ORM imports) to Postgres equivalents
+const PG_TYPE_MAP: Record<string, string> = {
+  datetime: 'timestamp', double: 'double precision', number: 'numeric',
+  tinyint: 'smallint', mediumint: 'integer', year: 'integer',
+  string: 'text', tinytext: 'text', mediumtext: 'text', longtext: 'text', clob: 'text',
+  nvarchar: 'varchar', nchar: 'char',
+  blob: 'bytea', binary: 'bytea', varbinary: 'bytea',
+  tinyblob: 'bytea', mediumblob: 'bytea', longblob: 'bytea',
+  enum: 'text', set: 'text', array: 'text',
+  citext: 'text', hstore: 'text', geometry: 'text', geography: 'text',
+}
+const KEEP_PARAMS = new Set(['numeric', 'varchar', 'char'])
+
+function pgType(raw: string): string {
+  const m = /^([A-Za-z_]+)\s*(\(.*\))?$/.exec(raw.trim())
+  if (!m) return raw.toUpperCase()
+  const base = m[1].toLowerCase()
+  const mapped = PG_TYPE_MAP[base]
+  if (!mapped) return raw.toUpperCase()                       // already valid / custom
+  return (KEEP_PARAMS.has(mapped) ? mapped + (m[2] ?? '') : mapped).toUpperCase()
+}
+
 export function exportSQL(schema: Schema): string {
   const blocks: string[] = []
 
@@ -125,7 +147,7 @@ export function exportSQL(schema: Schema): string {
 
     const colLines: string[] = []
     for (const col of table.columns) {
-      let line = `  "${col.name}" ${col.type.toUpperCase()}`
+      let line = `  "${col.name}" ${pgType(col.type)}`
       if (!col.nullable) line += ' NOT NULL'
       if (col.unique && !col.primaryKey) line += ' UNIQUE'
       if (col.primaryKey && !table.columns.some(c => c !== col && c.primaryKey)) {
