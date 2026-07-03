@@ -97,50 +97,64 @@ export function parseSQL(text: string): Schema {
     tables.push(entry)
   }
 
+  // ALTER TABLE ... ADD [CONSTRAINT ...] FOREIGN KEY (...) REFERENCES ...(...)
+  const tableByName = new Map(tables.map(t => [t.name, t]))
+  const alterRe = /ALTER\s+TABLE\s+[`"']?(\w+)[`"']?\s+ADD\s+(?:CONSTRAINT\s+[`"']?\w+[`"']?\s+)?FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+[`"']?(\w+)[`"']?\s*\(([^)]+)\)/gi
+  let a: RegExpExecArray | null
+  while ((a = alterRe.exec(clean)) !== null) {
+    const colName = a[2].replace(/[`"']/g, '').trim()
+    const col = tableByName.get(a[1])?.columns.find(c => c.name === colName)
+    if (col) col.foreignKey = { table: a[3], column: a[4].replace(/[`"']/g, '').trim() }
+  }
+
+  // re-sort now that ALTER-added FKs are in place (PK → FK → rest)
+  const rank = (c: Column) => c.primaryKey ? 0 : c.foreignKey ? 1 : 2
+  for (const t of tables) t.columns.sort((x, y) => rank(x) - rank(y))
+
   return { tables }
 }
 
 export function exportSQL(schema: Schema): string {
-  const lines: string[] = []
+  const blocks: string[] = []
 
   for (const table of schema.tables) {
-    // Add @tags comment if present
+    const parts: string[] = []
     if (table.tags && table.tags.length > 0) {
-      lines.push(`-- @tags: ${table.tags.join(', ')}`)
+      parts.push(`-- @tags: ${table.tags.join(', ')}`)
     }
 
-    lines.push(`CREATE TABLE "${table.name}" (`)
-    
     const colLines: string[] = []
-    
-    // Columns
     for (const col of table.columns) {
       let line = `  "${col.name}" ${col.type.toUpperCase()}`
       if (!col.nullable) line += ' NOT NULL'
-      if (col.unique) line += ' UNIQUE'
+      if (col.unique && !col.primaryKey) line += ' UNIQUE'
       if (col.primaryKey && !table.columns.some(c => c !== col && c.primaryKey)) {
-        // Simple inline PK if it's the only one
         line += ' PRIMARY KEY'
       }
       colLines.push(line)
     }
 
-    // Multi-column PK if necessary
+    // composite PK, if more than one PK column
     const pks = table.columns.filter(c => c.primaryKey).map(c => `"${c.name}"`)
-    if (pks.length > 1) {
-      colLines.push(`  PRIMARY KEY (${pks.join(', ')})`)
-    }
+    if (pks.length > 1) colLines.push(`  PRIMARY KEY (${pks.join(', ')})`)
 
-    // Foreign Keys
-    for (const col of table.columns) {
-      if (col.foreignKey) {
-        colLines.push(`  FOREIGN KEY ("${col.name}") REFERENCES "${col.foreignKey.table}"("${col.foreignKey.column}")`)
-      }
-    }
-
-    lines.push(colLines.join(',\n'))
-    lines.push(');\n')
+    parts.push(colLines.length
+      ? `CREATE TABLE "${table.name}" (\n${colLines.join(',\n')}\n);`
+      : `CREATE TABLE "${table.name}" ();`)
+    blocks.push(parts.join('\n'))
   }
 
-  return lines.join('\n')
+  // Foreign keys as ALTER TABLE after every table exists — valid regardless of
+  // declaration order and cyclic references.
+  const fks: string[] = []
+  for (const table of schema.tables) {
+    for (const col of table.columns) {
+      if (col.foreignKey) {
+        fks.push(`ALTER TABLE "${table.name}" ADD FOREIGN KEY ("${col.name}") REFERENCES "${col.foreignKey.table}" ("${col.foreignKey.column}");`)
+      }
+    }
+  }
+
+  const ddl = blocks.join('\n\n')
+  return (fks.length ? `${ddl}\n\n${fks.join('\n')}` : ddl) + '\n'
 }
