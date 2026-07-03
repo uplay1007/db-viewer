@@ -44,18 +44,33 @@
   --search-color: #818cf8;
 }
 
-.statusIndicator {
-  margin-left: auto;
+/* Error mini-log — fills remaining header space, scrolls horizontally */
+.log {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  scrollbar-width: thin;
 }
 
-.statusOk {
-  color: #22c55e;
-}
+.log::-webkit-scrollbar { height: 4px; }
+.log::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
 
-.statusError {
-  color: #ef4444;
+.logOk { color: #22c55e; }
+.logError { color: #f87171; }
+
+.logOkText { flex-shrink: 0; }
+
+.logItem {
+  flex-shrink: 0;
+  font-family: monospace;
 }
 
 .searchBar {

@@ -242,6 +242,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
   }, [applyViewMode, activeLayoutId])
 
   const [splitView, setSplitView] = useState(false)
+  const [schemaValid, setSchemaValid] = useState(true)
   const [editorWidth, setEditorWidth] = useState(380)
   const editorWidthRef = useRef(380)
   useEffect(() => { editorWidthRef.current = editorWidth }, [editorWidth])
@@ -835,7 +836,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
             {splitView ? (
               <>
                 <div className={appStyles.splitEditorPane} style={{ width: editorWidth }}>
-                  <SchemaEditor schema={schema} onSchemaChange={handleSchemaFromEditor} width={editorWidth} />
+                  <SchemaEditor schema={schema} onSchemaChange={handleSchemaFromEditor} onValidityChange={setSchemaValid} width={editorWidth} />
                 </div>
                 <div className={appStyles.resizeHandle} onMouseDown={handleResizeStart} />
               </>
@@ -985,7 +986,7 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                 {/* JSON split view */}
                 <div className={appStyles.toolPill}>
                   <button
-                    onClick={() => setSplitView(v => !v)}
+                    onClick={() => { setSplitView(v => !v); setSchemaValid(true) }}
                     className={`${appStyles.toolBtn} ${splitView ? appStyles.toolBtnActive : ''}`}
                     title="Toggle JSON editor"
                   >
@@ -1046,6 +1047,15 @@ function AppContent({ lang, setLang }: { lang: Lang; setLang: React.Dispatch<Rea
                  </EdgeHoverCtx.Provider>
                 </HighlightCtx.Provider>
               </ViewModeCtx.Provider>
+
+              {/* Canvas frozen while the schema editor has errors */}
+              {splitView && !schemaValid && (
+                <div className={appStyles.freezeOverlay}>
+                  <div className={appStyles.freezeMsg}>
+                    ⚠ {lang === 'ru' ? 'Исправьте ошибки схемы в редакторе' : 'Fix schema errors in the editor'}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
       </div>

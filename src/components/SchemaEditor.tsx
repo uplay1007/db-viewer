@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { EditorView } from '@codemirror/view'
 import { StreamLanguage } from '@codemirror/language'
+import { linter, type Diagnostic } from '@codemirror/lint'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { schemaToDSL, dslToSchema } from '../utils/schemaDSL'
+import { schemaToDSL, dslToSchema, type DSLDiagnostic } from '../utils/schemaDSL'
 import type { Schema } from '../types/schema'
 import styles from './SchemaEditor.module.css'
 
-const KEYWORDS = new Set(['Table'])
+const KEYWORDS = new Set(['Table', 'Relations'])
 const MODIFIERS = new Set(['pk', 'unique', 'null'])
 
 const schemaLang = StreamLanguage.define<Record<string, never>>({
@@ -34,19 +35,30 @@ const schemaLang = StreamLanguage.define<Record<string, never>>({
   tokenTable: {},
 })
 
+// underline lines that fail validation
+const dslLinter = linter(view => {
+  const { diagnostics } = dslToSchema(view.state.doc.toString())
+  const total = view.state.doc.lines
+  return diagnostics.map((d): Diagnostic => {
+    const line = view.state.doc.line(Math.min(Math.max(d.line, 1), total))
+    return { from: line.from, to: line.to, severity: 'error', message: d.message }
+  })
+}, { delay: 350 })
+
 interface Props {
   schema: Schema
   onSchemaChange: (schema: Schema) => void
+  onValidityChange?: (valid: boolean) => void
   width?: number
 }
 
-export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
+export function SchemaEditor({ schema, onSchemaChange, onValidityChange, width = 380 }: Props) {
   const fontSize = Math.max(11, Math.min(16, Math.round(13 * width / 380)))
   const schemaRef = useRef(schema)
   schemaRef.current = schema
 
   const [text, setText] = useState(() => schemaToDSL(schema))
-  const [error, setError] = useState<string | null>(null)
+  const [diagnostics, setDiagnostics] = useState<DSLDiagnostic[]>([])
   const isFocused = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -65,7 +77,7 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
   useEffect(() => {
     if (!isFocused.current) {
       setText(schemaToDSL(schema))
-      setError(null)
+      setDiagnostics([])
     }
   }, [schema])
 
@@ -73,22 +85,19 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
     setText(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      try {
-        const parsed = dslToSchema(value, schemaRef.current)
-        setError(null)
-        onSchemaChange(parsed)
-      } catch (e) {
-        setError((e as Error).message)
-      }
+      const { schema: parsed, diagnostics: diags } = dslToSchema(value, schemaRef.current)
+      setDiagnostics(diags)
+      onValidityChange?.(diags.length === 0)
+      if (diags.length === 0) onSchemaChange(parsed)
     }, 400)
-  }, [onSchemaChange])
+  }, [onSchemaChange, onValidityChange])
 
   const handleBlur = useCallback((e: React.FocusEvent) => {
     if (!containerRef.current?.contains(e.relatedTarget as Node)) {
       isFocused.current = false
-      if (!error) setText(schemaToDSL(schemaRef.current))
+      if (diagnostics.length === 0) setText(schemaToDSL(schemaRef.current))
     }
-  }, [error])
+  }, [diagnostics])
 
   const tableNames = useMemo(
     () => schema.tables.map(t => t.name),
@@ -146,9 +155,15 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
           <span>Find table</span>
         </button>
 
-        <span className={`${styles.statusIndicator} ${error ? styles.statusError : styles.statusOk}`}>
-          {error ? `⚠ ${error}` : '✓'}
-        </span>
+        {/* Error mini-log — scrolls horizontally for long messages */}
+        <div className={`${styles.log} ${diagnostics.length ? styles.logError : styles.logOk}`}>
+          {diagnostics.length === 0
+            ? <span className={styles.logOkText}>✓ valid</span>
+            : diagnostics.map((d, i) => (
+                <span key={i} className={styles.logItem}>⚠ line {d.line}: {d.message}</span>
+              ))
+          }
+        </div>
       </div>
 
       {searchOpen && (
@@ -202,7 +217,7 @@ export function SchemaEditor({ schema, onSchemaChange, width = 380 }: Props) {
           value={text}
           onChange={handleChange}
           onCreateEditor={view => { editorViewRef.current = view }}
-          extensions={[schemaLang]}
+          extensions={[schemaLang, dslLinter]}
           theme={oneDark}
           style={{ fontSize }}
           basicSetup={{
